@@ -358,128 +358,185 @@ function deleteEntry(key, idx) {
 // ── Nutriční databáze (hodnoty na 100 g / standardní porci) ──────────
 // Formát: [název, aliasy, kcal, sacharidy, bílkoviny, tuky, porce_g, icon, typ]
 const FOOD_DB = [
-  // Pečivo & obiloviny
-  ['žitný chléb',['žitný','ržný chléb','chleba žitný'],215,41,7.5,1.9,60,'🍞','Snídaně'],
-  ['bílý chléb',['chléb bílý','toastový chléb','toast'],265,49,8,2.4,60,'🍞','Snídaně'],
-  ['celozrnný chléb',['celozrnné pečivo','graham'],230,42,9,2.5,60,'🍞','Snídaně'],
-  ['rohlík',['houska','veky'],285,56,9,2,50,'🥖','Snídaně'],
-  ['bageta',['francouzská bageta'],270,54,9,1.5,80,'🥖','Oběd'],
-  ['ovesné vločky',['oatmeal','ovesná kaše','müsli'],370,60,13,7,60,'🌾','Snídaně'],
+  // ── Pečivo & obiloviny ──────────────────────────────────────────────
+  // žitný chléb: 1 krajíc ~55g = 118 kcal (USDA: 259kcal/100g)
+  ['žitný chléb',['žitný','ržný chléb','chleba žitný','chleba'],259,48,8.5,3.3,55,'🍞','Snídaně'],
+  // bílý chléb: 1 krajíc ~30g = 80 kcal (USDA: 265kcal/100g)
+  ['bílý chléb',['chléb bílý','toastový chléb','toast'],265,49,9,3.2,30,'🍞','Snídaně'],
+  // celozrnný chléb: 1 krajíc ~35g = 81 kcal
+  ['celozrnný chléb',['celozrnné pečivo','graham'],232,43,9,2.9,35,'🍞','Snídaně'],
+  // rohlík: 1 ks ~50g = 148 kcal
+  ['rohlík',['houska','rohlíky'],296,56,9,3.0,50,'🥖','Snídaně'],
+  // bageta: 1 porce ~80g = 218 kcal
+  ['bageta',['francouzská bageta'],272,54,9,1.5,80,'🥖','Oběd'],
+  // ovesné vločky: 1 porce ~60g = 222 kcal (USDA: 370kcal/100g)
+  ['ovesné vločky',['oatmeal','ovesná kaše','müsli'],370,66,13,7,60,'🌾','Snídaně'],
+  // müsli: 1 porce ~60g = 228 kcal
   ['müsli',['granola','cereálie'],380,65,8,6,60,'🥣','Snídaně'],
+  // rýže uvařená: 1 porce ~150g = 195 kcal (USDA: 130kcal/100g uvařená)
   ['rýže bílá',['rýže uvařená','bílá rýže'],130,28,2.7,0.3,150,'🍚','Oběd'],
   ['rýže hnědá',['celozrnná rýže'],112,23,2.6,0.9,150,'🍚','Oběd'],
-  ['těstoviny',['špagety','fusilli','penne','makarony'],158,31,5.5,0.9,180,'🍝','Oběd'],
-  ['brambory vařené',['brambory','bramborová kaše'],77,17,2,0.1,200,'🥔','Oběd'],
+  // těstoviny uvařené: 1 porce ~180g = 284 kcal (USDA: 158kcal/100g uvařené)
+  ['těstoviny',['špagety','fusilli','penne','makarony','pasta'],158,31,5.5,0.9,180,'🍝','Oběd'],
+  // brambory vařené: 1 porce ~150g = 116 kcal
+  ['brambory vařené',['brambory','potato'],77,17,2,0.1,150,'🥔','Oběd'],
   ['bramborová kaše',['kaše z brambor'],95,19,2.5,2,200,'🥔','Oběd'],
-  ['hranolky',['french fries','smažené brambory'],320,39,3.8,17,150,'🍟','Oběd'],
-  ['knedlík houskový',['houskový knedlík','knedlík'],200,40,6.5,2,150,'🍡','Oběd'],
-  ['knedlík bramborový',['bramborový knedlík'],120,24,3,0.5,150,'🍡','Oběd'],
-  ['kuskus',['couscous'],195,36,6,1.5,150,'🫘','Oběd'],
+  ['hranolky',['french fries','smažené brambory'],312,41,3.4,15,150,'🍟','Oběd'],
+  // knedlík houskový: 1 kus ~70g = 140 kcal
+  ['knedlík houskový',['houskový knedlík','knedlík'],200,40,6.5,2,70,'🍡','Oběd'],
+  ['knedlík bramborový',['bramborový knedlík'],120,24,3,0.5,80,'🍡','Oběd'],
+  ['kuskus',['couscous'],112,23,3.8,0.2,150,'🫘','Oběd'],
   ['quinoa',['quinoa vařená'],120,21,4.4,1.9,150,'🌾','Oběd'],
 
-  // Maso & ryby
-  ['kuřecí prsa',['kuře prsa','chicken breast','kuřecí'],165,0,31,3.6,150,'🍗','Oběd'],
-  ['kuřecí stehno',['stehno kuřecí','kuřecí čtvrtka'],209,0,26,11,150,'🍗','Oběd'],
-  ['vepřová kotleta',['vepřové','kotleta'],242,0,27,14,150,'🥩','Oběd'],
+  // ── Maso & ryby ─────────────────────────────────────────────────────
+  // kuřecí prsa bez kůže: 1 porce ~150g = 165 kcal (USDA: 110kcal/100g)
+  ['kuřecí prsa',['kuře prsa','chicken breast','kuřecí'],110,0,23,2.6,150,'🍗','Oběd'],
+  // kuřecí stehno: 1 porce ~130g = 182 kcal (USDA: 140kcal/100g)
+  ['kuřecí stehno',['stehno kuřecí','kuřecí čtvrtka'],140,0,20,6.5,130,'🍗','Oběd'],
+  // vepřová kotleta: 1 ks ~120g = 218 kcal (USDA: 182kcal/100g)
+  ['vepřová kotleta',['vepřové','kotleta'],182,0,25,9,120,'🥩','Oběd'],
   ['vepřová panenka',['panenka vepřová'],143,0,22,5.6,150,'🥩','Oběd'],
-  ['hovězí steak',['steak','hovězí','biftek'],217,0,26,12,180,'🥩','Oběd'],
-  ['hovězí guláš',['guláš','gulášová polévka'],180,8,18,8,300,'🍲','Oběd'],
-  ['svíčková',['svíčková na smetaně'],220,10,18,12,300,'🥩','Oběd'],
-  ['losos',['lososový filet','salmon'],206,0,20,13,150,'🐟','Oběd'],
-  ['tuňák v oleji',['tuna','tuňák konzerva'],200,0,25,10,100,'🐟','Oběd'],
-  ['tuňák ve vlastní šťávě',['tuňák light'],116,0,26,1,100,'🐟','Oběd'],
-  ['treska',['filé treska','pollock'],82,0,18,0.7,150,'🐟','Oběd'],
-  ['šunka vařená',['šunka','dětská šunka'],107,1.5,17,3.5,80,'🥩','Jiné'],
-  ['salám',['salámy','párek','uzeniny'],350,2,15,32,50,'🌭','Jiné'],
-  ['párek',['párek v rohlíku','hot dog'],280,3,12,25,60,'🌭','Jiné'],
-  ['slanina',['bacon'],541,0.6,37,42,30,'🥓','Snídaně'],
+  // hovězí steak: 1 porce ~180g = 357 kcal
+  ['hovězí steak',['steak','hovězí','biftek'],198,0,26,9.7,180,'🥩','Oběd'],
+  ['hovězí guláš',['guláš'],180,8,18,8,300,'🍲','Oběd'],
+  // svíčková: kompletní porce ~350g = 650 kcal
+  ['svíčková',['svíčková na smetaně'],186,10,12,11,350,'🥩','Oběd'],
+  // losos: 1 filet ~150g = 280 kcal (USDA: 187kcal/100g)
+  ['losos',['lososový filet','salmon'],187,0,20,11,150,'🐟','Oběd'],
+  ['tuňák v oleji',['tuna olej','tuňák konzervovaný'],190,0,25,10,100,'🐟','Oběd'],
+  ['tuňák ve vlastní šťávě',['tuna light','tuňák light'],86,0,19,0.6,100,'🐟','Oběd'],
+  ['treska',['filé treska'],82,0,18,0.7,150,'🐟','Oběd'],
+  // šunka: 2 plátky ~60g = 72 kcal
+  ['šunka vařená',['šunka','dětská šunka'],119,1.5,18,4.5,60,'🥩','Jiné'],
+  ['salám',['salámy','uzeniny'],380,2,16,34,50,'🌭','Jiné'],
+  ['párek',['párek v rohlíku','hot dog'],290,3,12,26,60,'🌭','Jiné'],
+  // slanina: 2 plátky ~30g = 138 kcal
+  ['slanina',['bacon'],458,0.6,35,35,30,'🥓','Snídaně'],
   ['krevety',['garnáti','shrimp'],99,0.9,24,0.3,150,'🦐','Oběd'],
 
-  // Vejce & mléčné
-  ['vejce vařené',['vajíčko','vejce'],155,1.1,13,10.6,100,'🥚','Snídaně'],
-  ['vejce míchaná',['scrambled eggs','míchanice'],158,1.2,11,12,100,'🍳','Snídaně'],
+  // ── Vejce & mléčné ──────────────────────────────────────────────────
+  // 1 vejce vel. M = 57g → 72 kcal (USDA: 143kcal/100g celé vejce)
+  ['vejce vařené',['vajíčko','vejce','egg'],143,0.7,12.6,9.9,57,'🥚','Snídaně'],
+  // míchané vejce: 1 vejce ~57g + trocha másla → ~100 kcal
+  ['vejce míchaná',['scrambled eggs','míchanice'],148,1.2,10,11,57,'🍳','Snídaně'],
   ['omeleta',['omelette'],154,1,11,12,120,'🍳','Snídaně'],
-  ['mléko polotučné',['mléko','polotučné mléko'],46,4.8,3.2,1.5,250,'🥛','Snídaně'],
-  ['plnotučné mléko',['plnotučné','whole milk'],61,4.7,3.2,3.3,250,'🥛','Snídaně'],
+  // mléko: 1 sklenice ~250ml = 115 kcal (plnotučné 3,5 %)
+  ['mléko plnotučné',['mléko','whole milk','plnotučné'],61,4.7,3.2,3.3,250,'🥛','Snídaně'],
+  ['mléko polotučné',['polotučné mléko'],46,4.8,3.2,1.5,250,'🥛','Snídaně'],
+  // jogurt: 1 kelímek ~150g = 89 kcal
   ['jogurt bílý',['bílý jogurt','plain yogurt'],59,4,3.5,3,150,'🫙','Snídaně'],
-  ['řecký jogurt',['greek yogurt','skyr'],97,4,9,5,150,'🥛','Svačina'],
-  ['tvaroh nízkotučný',['tvaroh','cottage cheese'],72,3,15,0.3,150,'🫙','Snídaně'],
-  ['sýr eidam',['eidam','eidamský sýr'],291,0,28,19,50,'🧀','Jiné'],
-  ['sýr gouda',['gouda'],356,2.2,25,27,50,'🧀','Jiné'],
-  ['sýr cottage',['cottage cheese','tvarohový sýr'],103,3.4,11,4.5,100,'🧀','Jiné'],
+  // řecký jogurt: 1 kelímek ~150g = 133 kcal (USDA Fage 2%: 73kcal/100g)
+  ['řecký jogurt',['greek yogurt','skyr'],73,4,10,0.7,150,'🥛','Svačina'],
+  // tvaroh: 1 balení ~250g = 180 kcal
+  ['tvaroh nízkotučný',['tvaroh','cottage'],72,3.5,12,0.6,250,'🫙','Snídaně'],
+  // sýr eidam 30%: 1 plátek ~25g = 66 kcal
+  ['sýr eidam',['eidam','eidamský sýr'],264,0,26,17,25,'🧀','Jiné'],
+  ['sýr gouda',['gouda'],356,2.2,25,27,25,'🧀','Jiné'],
+  ['sýr cottage',['cottage cheese'],103,3.4,11,4.5,100,'🧀','Jiné'],
   ['smetana',['smetana ke šlehání','šlehačka'],296,3.6,2.3,30,30,'🥛','Jiné'],
-  ['máslo',['butter','přepuštěné máslo'],717,0.6,0.9,81,10,'🧈','Jiné'],
-  ['tvarůžky',['olomoucké tvarůžky'],107,0,28,0.1,50,'🧀','Jiné'],
-  ['philadelphia',['cream cheese','smetanový sýr'],342,4,6,33,30,'🧀','Snídaně'],
+  ['máslo',['butter'],717,0.6,0.9,81,10,'🧈','Jiné'],
+  ['tvarůžky',['olomoucké tvarůžky'],105,0,28,0.1,50,'🧀','Jiné'],
+  ['philadelphia',['cream cheese','smetanový sýr'],250,4,5,24,30,'🧀','Snídaně'],
 
-  // Zelenina
+  // ── Zelenina ────────────────────────────────────────────────────────
   ['rajče',['rajčata','tomato'],18,3.5,0.9,0.2,150,'🍅','Jiné'],
   ['okurka',['okurky','cucumber'],15,2.2,0.7,0.1,150,'🥒','Jiné'],
   ['paprika červená',['paprika','bell pepper'],31,6,1,0.3,150,'🫑','Jiné'],
   ['mrkev',['karotka','carrot'],41,10,0.9,0.2,100,'🥕','Jiné'],
-  ['brokolice',['broccoli'],34,7,2.8,0.4,200,'🥦','Příloha'],
+  ['brokolice',['broccoli'],34,7,2.8,0.4,200,'🥦','Jiné'],
   ['špenát',['spinach'],23,1.4,2.9,0.4,150,'🥬','Jiné'],
   ['hlávkový salát',['ledový salát','zelený salát'],15,2.2,1.4,0.2,100,'🥬','Jiné'],
   ['cibule',['onion'],40,9.3,1.1,0.1,50,'🧅','Jiné'],
   ['česnek',['garlic'],149,33,6.4,0.5,5,'🧄','Jiné'],
-  ['kukuřice',['corn','kukuřice konzervovaná'],86,19,3.2,1.2,100,'🌽','Jiné'],
+  ['kukuřice',['corn'],86,19,3.2,1.2,100,'🌽','Jiné'],
   ['hrášek',['zelený hrášek','peas'],81,14,5.4,0.4,100,'🫛','Jiné'],
   ['fazole červené',['fazole','kidney beans'],127,22,8.7,0.5,150,'🫘','Oběd'],
-  ['čočka vařená',['lentils','čočková polévka'],116,20,9,0.4,150,'🫘','Oběd'],
+  ['čočka vařená',['lentils'],116,20,9,0.4,150,'🫘','Oběd'],
   ['cizrna',['chickpeas','hummus'],164,27,8.9,2.6,150,'🫘','Oběd'],
+  // avokádo: 1/2 kusu ~80g = 128 kcal
   ['avokádo',['avocado'],160,9,2,15,80,'🥑','Svačina'],
 
-  // Ovoce
-  ['banán',['banana'],89,23,1.1,0.3,120,'🍌','Svačina'],
-  ['jablko',['apple','jabloň'],52,14,0.3,0.2,150,'🍎','Svačina'],
-  ['pomeranč',['orange','mandarinka'],47,12,0.9,0.1,150,'🍊','Svačina'],
+  // ── Ovoce ───────────────────────────────────────────────────────────
+  // banán: 1 střední (bez slupky) ~118g = 105 kcal (USDA: 89kcal/100g)
+  ['banán',['banana'],89,23,1.1,0.3,118,'🍌','Svačina'],
+  // jablko: 1 střední ~182g = 95 kcal
+  ['jablko',['apple'],52,14,0.3,0.2,182,'🍎','Svačina'],
+  // pomeranč: 1 střední ~131g = 62 kcal
+  ['pomeranč',['orange'],47,12,0.9,0.1,131,'🍊','Svačina'],
+  // mandarinka: 1 ks ~76g = 40 kcal
+  ['mandarinka',['tangerine','klementina'],53,13,0.8,0.3,76,'🍊','Svačina'],
   ['jahody',['strawberries','jahoda'],32,7.7,0.7,0.3,150,'🍓','Svačina'],
   ['hrozny',['víno hrozny','grapes'],69,18,0.7,0.2,150,'🍇','Svačina'],
-  ['kiwi',['kiwifruit'],61,15,1.1,0.5,100,'🥝','Svačina'],
+  ['kiwi',['kiwifruit'],61,15,1.1,0.5,76,'🥝','Svačina'],
   ['meloun',['watermelon','vodní meloun'],30,7.6,0.6,0.2,200,'🍉','Svačina'],
   ['borůvky',['blueberries','borůvka'],57,14,0.7,0.3,100,'🫐','Svačina'],
-  ['mango',['mango tropické'],60,15,0.8,0.4,150,'🥭','Svačina'],
+  ['mango',['mango tropické'],60,15,0.8,0.4,165,'🥭','Svačina'],
+  // hruška: 1 ks ~178g = 101 kcal
+  ['hruška',['pear'],57,15,0.4,0.1,178,'🍐','Svačina'],
+  // broskev: 1 ks ~150g = 58 kcal
+  ['broskev',['peach','nektarinka'],39,10,0.9,0.3,150,'🍑','Svačina'],
 
-  // Ořechy & semena
-  ['mandle',['almonds'],579,22,21,50,30,'🌰','Svačina'],
-  ['vlašské ořechy',['walnuts','ořechy'],654,14,15,65,30,'🌰','Svačina'],
-  ['arašídy',['peanuts','arašídové máslo'],567,16,26,49,30,'🥜','Svačina'],
-  ['slunečnicová semínka',['semínka','sunflower seeds'],584,20,21,51,30,'🌻','Svačina'],
+  // ── Ořechy & semena ─────────────────────────────────────────────────
+  // mandle: 1 hrst ~28g = 164 kcal
+  ['mandle',['almonds'],579,22,21,50,28,'🌰','Svačina'],
+  ['vlašské ořechy',['walnuts','ořechy'],654,14,15,65,28,'🌰','Svačina'],
+  ['arašídy',['peanuts'],567,16,26,49,28,'🥜','Svačina'],
+  ['arašídové máslo',['peanut butter'],598,20,25,51,32,'🥜','Snídaně'],
+  ['slunečnicová semínka',['semínka','sunflower seeds'],584,20,21,51,28,'🌻','Svačina'],
   ['lněná semínka',['lněné semínko','flaxseed'],534,29,18,42,15,'🌿','Jiné'],
 
-  // Polévky & hotová jídla
+  // ── Polévky & hotová jídla ──────────────────────────────────────────
   ['kuřecí polévka',['slepičí vývar','chicken soup'],25,2,2,0.8,350,'🍲','Oběd'],
   ['hovězí vývar',['bujón','vývar'],15,1,1.5,0.3,350,'🍲','Oběd'],
   ['zelňačka',['kyselo zelná polévka'],60,7,3,2,350,'🍲','Oběd'],
-  ['pizza margherita',['pizza','pizza sýr'],266,33,11,10,300,'🍕','Oběd'],
-  ['hamburger',['burger','cheeseburger'],295,24,17,14,200,'🍔','Oběd'],
+  // pizza margherita: 1 plátek ~107g = 270 kcal (USDA: 252kcal/100g)
+  ['pizza margherita',['pizza','pizza sýr'],252,33,11,9,107,'🍕','Oběd'],
+  // hamburger: 1 ks ~230g = 540 kcal
+  ['hamburger',['burger','cheeseburger'],295,24,17,14,230,'🍔','Oběd'],
   ['hot dog',['hotdog'],290,25,11,16,150,'🌭','Jiné'],
-  ['sushi',['nigiri','maki','sashimi'],150,25,8,1.5,200,'🍱','Oběd'],
+  // sushi: 6 ks nigiri ~200g = 250 kcal
+  ['sushi',['nigiri','maki','sashimi'],125,25,8,1.5,200,'🍱','Oběd'],
   ['kebab',['döner kebab','shawarma'],280,28,18,11,300,'🌯','Oběd'],
 
-  // Sladkosti & snacks
+  // ── Sladkosti & snacks ──────────────────────────────────────────────
+  // čokoláda: 1 řada ~40g = 214 kcal
   ['čokoláda mléčná',['milka','čokoláda'],535,59,8,30,40,'🍫','Svačina'],
   ['čokoláda hořká',['dark chocolate','hořká čokoláda'],598,46,5,43,40,'🍫','Svačina'],
+  // sušenky: 3 ks ~30g = 135 kcal
   ['sušenky',['cookies','piškoty','digestive'],450,65,6,18,30,'🍪','Svačina'],
+  // croissant: 1 ks ~80g = 325 kcal
   ['croissant',['křupavý croissant'],406,46,8.2,21,80,'🥐','Snídaně'],
   ['dort',['koláč','cake','cheesecake'],350,48,5,16,100,'🎂','Jiné'],
+  // zmrzlina: 1 kopec ~100g = 207 kcal
   ['zmrzlina',['ice cream','vanilková zmrzlina'],207,24,3.5,11,100,'🍦','Svačina'],
-  ['med',['honey'],304,82,0.3,0,15,'🍯','Snídaně'],
+  // med: 1 lžička ~7g = 21 kcal
+  ['med',['honey'],304,82,0.3,0,21,'🍯','Snídaně'],
   ['džem',['marmeláda','jam'],250,65,0.5,0.1,20,'🍓','Snídaně'],
+  // proteinová tyčinka: 1 ks ~60g = 210 kcal
+  ['proteinová tyčinka',['protein bar','tyčinka'],350,40,25,8,60,'🍫','Svačina'],
 
-  // Nápoje
+  // ── Nápoje ──────────────────────────────────────────────────────────
+  // džus: 1 sklenice ~250ml
   ['pomerančový džus',['OJ','džus pomeranč'],45,10,0.7,0.2,250,'🧃','Snídaně'],
+  // cola: 1 plechovka 330ml = 139 kcal
   ['coca cola',['kola','pepsi','coke'],42,11,0,0,330,'🥤','Jiné'],
+  // pivo 12°: 1 pivo 500ml = 215 kcal (USDA: 43kcal/100ml)
   ['pivo',['pivo 10°','pivo 12°','beer'],43,3.6,0.5,0,500,'🍺','Jiné'],
+  // víno: 1 sklenička ~150ml = 128 kcal
   ['víno červené',['red wine','cabernet'],85,2.6,0.1,0,150,'🍷','Jiné'],
+  // latte: 1 ks ~300ml = 180 kcal
   ['káva s mlékem',['latte','cappuccino','flat white'],60,6,3,2.5,300,'☕','Jiné'],
-  ['proteinový shake',['protein shake','whey protein'],150,8,25,3,300,'💪','Svačina'],
+  // proteinový shake: 1 porce ~300ml
+  ['proteinový shake',['protein shake','whey protein'],50,3.3,8.3,1,300,'💪','Svačina'],
 
-  // Tuky & omáčky
-  ['olivový olej',['olive oil','extra virgin'],884,0,0,100,10,'🫒','Jiné'],
-  ['slunečnicový olej',['rostlinný olej','olej'],884,0,0,100,10,'🫙','Jiné'],
-  ['majonéza',['mayo','majonézový dresink'],680,2.8,1.1,75,20,'🫙','Jiné'],
-  ['kečup',['ketchup'],112,26,1.5,0.1,30,'🍅','Jiné'],
+  // ── Tuky & omáčky ───────────────────────────────────────────────────
+  // olivový olej: 1 lžíce ~14g = 124 kcal
+  ['olivový olej',['olive oil','extra virgin'],884,0,0,100,14,'🫒','Jiné'],
+  ['slunečnicový olej',['rostlinný olej','olej'],884,0,0,100,14,'🫙','Jiné'],
+  // majonéza: 1 lžíce ~15g = 102 kcal
+  ['majonéza',['mayo'],680,2.8,1.1,75,15,'🫙','Jiné'],
+  // kečup: 1 lžíce ~17g = 19 kcal
+  ['kečup',['ketchup'],112,26,1.5,0.1,17,'🍅','Jiné'],
   ['hořčice',['mustard'],66,6,4.4,3.3,10,'🫙','Jiné'],
 ];
 
@@ -558,20 +615,120 @@ function findFood(query, portionHint) {
   };
 }
 
+// ── Open Food Facts API ──────────────────────────────────────────────
+// Volné CORS API, miliony produktů, bez API klíče
+async function searchOpenFoodFacts(query) {
+  const url = 'https://world.openfoodfacts.org/cgi/search.pl?'
+    + 'search_terms=' + encodeURIComponent(query)
+    + '&search_simple=1&action=process&json=1&page_size=5'
+    + '&fields=product_name,product_name_cs,nutriments,serving_size,serving_quantity,categories_tags';
+
+  const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+  if (!r.ok) throw new Error('OFF ' + r.status);
+  const d = await r.json();
+  if (!d.products || d.products.length === 0) return null;
+
+  // Vyber první produkt s kompletními makry
+  const p = d.products.find(x =>
+    x.nutriments &&
+    x.nutriments['energy-kcal_100g'] != null &&
+    x.nutriments['carbohydrates_100g'] != null
+  ) || d.products[0];
+
+  if (!p || !p.nutriments) return null;
+
+  const n   = p.nutriments;
+  const kcal100 = n['energy-kcal_100g'] || (n['energy_100g'] || 0) / 4.184;
+  const sach100 = n['carbohydrates_100g'] || 0;
+  const bilk100 = n['proteins_100g'] || 0;
+  const tuk100  = n['fat_100g'] || 0;
+
+  // Určení defaultG — ze serving_quantity nebo 100g
+  const servingG = parseFloat(p.serving_quantity) || 100;
+  const name = p.product_name_cs || p.product_name || query;
+
+  // Jednoduchý typ podle kategorií
+  const cats = (p.categories_tags || []).join(' ');
+  let typ = 'Jiné';
+  if (/breakfast|snidane|cereals|yogurt/.test(cats)) typ = 'Snídaně';
+  else if (/lunch|obed|main/.test(cats))              typ = 'Oběd';
+  else if (/snack|svacina|bar/.test(cats))            typ = 'Svačina';
+  else if (/dinner|vecere/.test(cats))                typ = 'Večeře';
+
+  const icon = guessIcon(name);
+  const r1   = v => Math.round(v * 10) / 10;
+  const mult = servingG / 100;
+
+  return {
+    kcal:      r1(kcal100 * mult),
+    sacharidy: r1(sach100 * mult),
+    bilkoviny: r1(bilk100 * mult),
+    tuky:      r1(tuk100  * mult),
+    porce:     servingG + 'g',
+    typ, icon,
+    _score:    900,   // OFF výsledek má vysokou důvěru
+    _suggest:  [],
+    _defaultG: servingG,
+    _defaultPcs: null,
+    _source:   '🌐 Open Food Facts · ' + name,
+  };
+}
+
+function guessIcon(name) {
+  const n = name.toLowerCase();
+  if (/vejce|egg/.test(n))          return '🥚';
+  if (/mléko|milk/.test(n))         return '🥛';
+  if (/chléb|bread|toast/.test(n))  return '🍞';
+  if (/kuř|chicken/.test(n))        return '🍗';
+  if (/hověz|beef|steak/.test(n))   return '🥩';
+  if (/ryb|fish|losos|salmon/.test(n)) return '🐟';
+  if (/pizza/.test(n))              return '🍕';
+  if (/burger|hambur/.test(n))      return '🍔';
+  if (/čokolád|chocolate/.test(n))  return '🍫';
+  if (/jogurt|yogurt/.test(n))      return '🥛';
+  if (/sýr|cheese/.test(n))         return '🧀';
+  if (/banán|banana/.test(n))       return '🍌';
+  if (/jablko|apple/.test(n))       return '🍎';
+  if (/sušenk|cookie|biscuit/.test(n)) return '🍪';
+  if (/pivo|beer/.test(n))          return '🍺';
+  if (/víno|wine/.test(n))          return '🍷';
+  if (/káva|coffee/.test(n))        return '☕';
+  if (/salát|salad/.test(n))        return '🥗';
+  if (/těstovin|pasta/.test(n))     return '🍝';
+  if (/rýže|rice/.test(n))          return '🍚';
+  return '🍽️';
+}
+
 // ── Lookup entry point ────────────────────────────────────────────────
+// 1. Lokální DB (rychlé, offline)
+// 2. Open Food Facts API (online, přesné)
+// 3. Fallback odhad
 async function lookupNutrition(foodName, porce) {
-  const result = findFood(foodName, porce);
-  if (result && result._score >= 100) return result;
+  // Krok 1: lokální DB — pokud dobrá shoda, vrátíme hned
+  const local = findFood(foodName, porce);
+  if (local && local._score >= 750) {
+    local._source = '📖 Lokální databáze';
+    return local;
+  }
 
-  // Záloha: pokud není v DB, vrátíme rozumný odhad
-  // (bez síťového volání — CORS by ho blokoval)
-  if (result) return result; // slabá shoda je lepší než nic
+  // Krok 2: Open Food Facts
+  try {
+    const off = await searchOpenFoodFacts(foodName);
+    if (off) return off;
+  } catch (e) {
+    console.warn('OFF API nedostupné:', e.message);
+  }
 
-  // Absolutně neznámé jídlo → generický odhad 200 kcal
+  // Krok 3: slabá lokální shoda nebo generický odhad
+  if (local) {
+    local._source = '📖 Lokální databáze (přibližně)';
+    return local;
+  }
   return {
     kcal: 200, sacharidy: 25, bilkoviny: 10, tuky: 7,
-    porce: porce || '100g', typ: 'Jiné', icon: '🍽️', _score: 0,
-    _suggest: [],
+    porce: '100g', typ: 'Jiné', icon: '🍽️',
+    _score: 0, _suggest: [], _defaultG: 100, _defaultPcs: null,
+    _source: '⚠ Odhad — jídlo nenalezeno',
   };
 }
 
@@ -602,6 +759,7 @@ function renderAdd() {
           <div style="flex:1;min-width:0">
             <div id="res-name" style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
             <div id="res-porce-lbl" style="font-size:12px;color:var(--sub);margin-top:2px"></div>
+            <div id="res-source" style="font-size:10px;color:var(--sub);margin-top:3px;opacity:.7"></div>
           </div>
           <div style="text-align:right;flex-shrink:0">
             <div id="res-kcal" style="font-size:28px;font-weight:800;color:var(--accent);line-height:1"></div>
@@ -693,7 +851,7 @@ async function lookupAndFill() {
   const btn = document.getElementById('btn-lookup');
   const status = document.getElementById('lookup-status');
   btn.textContent = '⏳'; btn.disabled = true;
-  status.innerHTML = '<span style="color:var(--accent)">🔍 Hledám…</span>';
+  status.innerHTML = '<span style="color:var(--accent)">🔍 Hledám v databázi a online…</span>';
   document.getElementById('result-card').style.display = 'none';
 
   try {
@@ -739,7 +897,11 @@ async function lookupAndFill() {
     const sel = document.getElementById('f-type');
     if (d.typ) [...sel.options].forEach((o,i) => { if (o.value === d.typ) sel.selectedIndex = i; });
 
-    const conf = d._score >= 600 ? '✓ Nalezeno' : d._score >= 100 ? '~ Přibližná shoda' : '? Odhad';
+    // Zobraz zdroj dat
+    const srcEl = document.getElementById('res-source');
+    if (srcEl) srcEl.textContent = d._source || '';
+
+    const conf = d._score >= 900 ? '✓ Open Food Facts' : d._score >= 600 ? '✓ Nalezeno' : d._score >= 100 ? '~ Přibližná shoda' : '? Odhad';
     const confCol = d._score >= 600 ? 'var(--green)' : d._score >= 100 ? '#FFD166' : '#EF476F';
     let suggestHTML = '';
     if (d._suggest && d._suggest.length && d._score < 600) {
