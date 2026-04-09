@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kalorie">
+<meta name="theme-color" content="#0F1117">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<title>KalorieTracker</title>
+<style>
+:root {
+  --bg: #0F1117;
+  --card: #1A1D27;
+  --card2: #222535;
+  --accent: #FF6B35;
+  --accent2: #FFD166;
+  --green: #06D6A0;
+  --blue: #4895EF;
+  --red: #EF476F;
+  --text: #F0F0F0;
+  --sub: #8A8FA8;
+  --border: #2A2D3E;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'SF Pro Text', sans-serif; overscroll-behavior: none; }
+
+/* ── Layout ── */
+#app { display: flex; flex-direction: column; height: 100%; max-width: 430px; margin: 0 auto; position: relative; }
+#header {
+  padding: calc(var(--safe-top) + 14px) 20px 14px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 10;
+}
+#header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+#header .date-nav { display: flex; align-items: center; gap: 8px; }
+#header .date-nav button { background: var(--card2); border: none; color: var(--text); width: 30px; height: 30px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+#header .date-nav span { font-size: 13px; color: var(--accent2); font-weight: 600; min-width: 80px; text-align: center; }
+
+#content { flex: 1; overflow-y: auto; padding: 16px 16px calc(var(--safe-bottom) + 80px); }
+
+/* ── Bottom nav ── */
+#nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: var(--safe-bottom);
+  z-index: 10;
+}
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 0 8px; cursor: pointer; border: none; background: none; color: var(--sub); font-size: 10px; gap: 4px; transition: color .15s; }
+.nav-btn .icon { font-size: 22px; line-height: 1; }
+.nav-btn.active { color: var(--accent); }
+
+/* ── Cards ── */
+.card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.card-title { font-size: 12px; color: var(--sub); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+
+/* ── Kcal ring ── */
+#kcal-section { display: flex; align-items: center; gap: 20px; }
+#ring-wrap { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
+#ring-wrap svg { transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: var(--border); stroke-width: 12; }
+.ring-fg { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset .6s ease, stroke .3s; }
+#ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#ring-label .big { font-size: 24px; font-weight: 700; line-height: 1; }
+#ring-label .sm { font-size: 10px; color: var(--sub); margin-top: 2px; }
+#kcal-info { flex: 1; }
+#kcal-info .kcal-num { font-size: 36px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+#kcal-info .kcal-goal { font-size: 13px; color: var(--sub); margin-top: 4px; }
+#kcal-info .kcal-left { font-size: 13px; color: var(--green); margin-top: 2px; font-weight: 600; }
+
+/* ── Macro row ── */
+#macros { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+.macro-card { background: var(--card); border-radius: 14px; padding: 12px; text-align: center; }
+.macro-card .m-val { font-size: 20px; font-weight: 700; line-height: 1; }
+.macro-card .m-lbl { font-size: 10px; color: var(--sub); margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.macro-card .m-goal { font-size: 10px; color: var(--sub); margin-top: 2px; }
+.macro-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 6px; }
+.macro-bar { height: 4px; border-radius: 2px; transition: width .4s ease; max-width: 100%; }
+
+/* ── Food list ── */
+.food-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.food-item:last-child { border-bottom: none; }
+.food-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.food-info { flex: 1; min-width: 0; }
+.food-info .fname { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.food-info .fmeta { font-size: 12px; color: var(--sub); margin-top: 2px; }
+.food-kcal { font-size: 15px; font-weight: 700; color: var(--accent); }
+.food-del { background: none; border: none; color: var(--sub); font-size: 18px; cursor: pointer; padding: 4px 6px; }
+.food-del:active { color: var(--red); }
+
+/* ── Add form ── */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 12px; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.field input, .field select { width: 100%; background: var(--card2); border: 1px solid var(--border); color: var(--text); font-size: 16px; padding: 12px 14px; border-radius: 12px; outline: none; -webkit-appearance: none; }
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field select option { background: var(--card2); }
+.macro-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.btn-primary { width: 100%; background: var(--accent); color: #fff; border: none; font-size: 16px; font-weight: 700; padding: 16px; border-radius: 14px; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+.btn-primary:active { opacity: .8; }
+.btn-secondary { width: 100%; background: var(--card2); color: var(--text); border: 1px solid var(--border); font-size: 14px; padding: 12px; border-radius: 12px; cursor: pointer; margin-top: 8px; }
+
+/* ── History ── */
+.hist-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.hist-row:last-child { border-bottom: none; }
+.hist-date { font-size: 14px; font-weight: 600; }
+.hist-date.today { color: var(--accent2); }
+.hist-sub { font-size: 12px; color: var(--sub); margin-top: 2px; }
+.hist-kcal { font-size: 16px; font-weight: 700; }
+.hist-bar-wrap { width: 60px; height: 6px; background: var(--border); border-radius: 3px; margin-top: 4px; margin-left: auto; }
+.hist-bar { height: 6px; border-radius: 3px; }
+
+/* ── Stats ── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.stat-card { background: var(--card); border-radius: 14px; padding: 14px; }
+.stat-card .s-lbl { font-size: 11px; color: var(--sub); text-transform: uppercase; letter-spacing: .5px; }
+.stat-card .s-val { font-size: 26px; font-weight: 800; margin-top: 4px; line-height: 1; }
+.stat-card .s-unit { font-size: 12px; color: var(--sub); }
+
+/* ── Bar chart ── */
+#chart-wrap { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+#chart-wrap h3 { font-size: 13px; color: var(--sub); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .5px; }
+#bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 100px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.bar-col .bar { width: 100%; border-radius: 4px 4px 0 0; transition: height .4s ease; min-height: 2px; }
+.bar-col .bar-lbl { font-size: 9px; color: var(--sub); }
+
+/* ── Goals form ── */
+.goals-section h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+
+/* ── Toast ── */
+#toast { position: fixed; bottom: calc(var(--safe-bottom) + 90px); left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green); color: #0a1a14; font-size: 14px; font-weight: 600; padding: 10px 20px; border-radius: 100px; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; z-index: 100; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 40px 20px; color: var(--sub); }
+.empty .e-icon { font-size: 48px; margin-bottom: 12px; }
+.empty p { font-size: 14px; line-height: 1.6; }
+
+/* ── Install banner ── */
+#install-banner { background: var(--card2); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 14px; display: none; align-items: center; gap: 12px; }
+#install-banner .ib-icon { font-size: 32px; }
+#install-banner .ib-text p { font-size: 13px; font-weight: 600; }
+#install-banner .ib-text span { font-size: 12px; color: var(--sub); }
+#install-banner button { margin-left: auto; background: var(--accent); color: #fff; border: none; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <h1>🔥 Kalorie</h1>
+    <div class="date-nav">
+      <button onclick="changeDay(-1)">‹</button>
+      <span id="hdr-date"></span>
+      <button onclick="changeDay(1)">›</button>
+    </div>
+  </div>
+
+  <div id="content"></div>
+
+  <nav id="nav">
+    <button class="nav-btn active" onclick="showTab('overview')" id="btn-overview">
+      <span class="icon">📊</span><span>Přehled</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('add')" id="btn-add">
+      <span class="icon">➕</span><span>Přidat</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('history')" id="btn-history">
+      <span class="icon">📅</span><span>Historie</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('stats')" id="btn-stats">
+      <span class="icon">📈</span><span>Statistiky</span>
+    </button>
+    <button class="nav-btn" onclick="showTab('goals')" id="btn-goals">
+      <span class="icon">⚙️</span><span>Cíle</span>
+    </button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const DB_KEY = 'kt_data_v2';
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(DB_KEY)) || defaultData(); }
+  catch { return defaultData(); }
+}
+function defaultData() {
+  return { zaznamy: {}, cile: { kcal: 2000, sacharidy: 250, bilkoviny: 150, tuky: 65 } };
+}
+function saveData() { localStorage.setItem(DB_KEY, JSON.stringify(DATA)); }
+
+let DATA = loadData();
+
+// ── Date utils ──────────────────────────────────────────────────────
+let currentDate = new Date();
+currentDate.setHours(0,0,0,0);
+
+function dayKey(d) {
+  return d.toISOString().slice(0,10);
+}
+function todayKey() {
+  const t = new Date(); t.setHours(0,0,0,0);
+  return dayKey(t);
+}
+function fmtDate(d) {
+  const t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((d - t) / 86400000);
+  if (diff === 0) return 'Dnes';
+  if (diff === -1) return 'Včera';
+  return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' });
+}
+
+function changeDay(dir) {
+  const next = new Date(currentDate);
+  next.setDate(next.getDate() + dir);
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (next > today) return;
+  currentDate = next;
+  updateHeader();
+  renderCurrent();
+}
+
+function updateHeader() {
+  document.getElementById('hdr-date').textContent = fmtDate(currentDate);
+}
+
+// ── Sums ────────────────────────────────────────────────────────────
+function sumDay(key) {
+  const items = DATA.zaznamy[key] || [];
+  return items.reduce((a, z) => ({
+    kcal: a.kcal + (z.kcal || 0),
+    sacharidy: a.sacharidy + (z.sacharidy || 0),
+    bilkoviny: a.bilkoviny + (z.bilkoviny || 0),
+    tuky: a.tuky + (z.tuky || 0),
+  }), { kcal: 0, sacharidy: 0, bilkoviny: 0, tuky: 0 });
+}
+
+// ── Tab state ───────────────────────────────────────────────────────
+let currentTab = 'overview';
+function showTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + tab).classList.add('active');
+  renderCurrent();
+  document.getElementById('content').scrollTop = 0;
+}
+function renderCurrent() {
+  updateHeader();
+  if (currentTab === 'overview') renderOverview();
+  else if (currentTab === 'add') renderAdd();
+  else if (currentTab === 'history') renderHistory();
+  else if (currentTab === 'stats') renderStats();
+  else if (currentTab === 'goals') renderGoals();
+}
+
+// ── OVERVIEW ────────────────────────────────────────────────────────
+function renderOverview() {
+  const key = dayKey(currentDate);
+  const items = DATA.zaznamy[key] || [];
+  const t = sumDay(key);
+  const c = DATA.cile;
+  const pct = c.kcal ? Math.min(t.kcal / c.kcal, 1) : 0;
+  const ringColor = pct < 0.9 ? '#06D6A0' : pct < 1 ? '#FFD166' : '#FF6B35';
+  const left = Math.max(0, c.kcal - t.kcal);
+
+  // SVG ring
+  const R = 46, circ = 2 * Math.PI * R;
+  const dash = circ * pct;
+
+  const mealIcons = ['🍳','🥗','🍝','🥪','🍽️','🍎','🥤','🍫'];
+  const typeColors = { 'Snídaně':'#FFD166','Přesnídávka':'#06D6A0','Oběd':'#4895EF','Svačina':'#FF9F1C','Večeře':'#7B2FBE','Jiné':'#8A8FA8' };
+
+  const foodHTML = items.length === 0
+    ? `<div class="empty"><div class="e-icon">🍽️</div><p>Zatím žádná jídla.<br>Klikni na ➕ a přidej první záznam.</p></div>`
+    : items.map((z, i) => `
+      <div class="food-item">
+        <div class="food-icon" style="background:${(typeColors[z.typ]||'#555')}22;">
+          ${mealIcons[i % mealIcons.length]}
+        </div>
+        <div class="food-info">
+          <div class="fname">${escH(z.nazev)}</div>
+          <div class="fmeta">${z.typ || ''} ${z.porce ? '· ' + escH(z.porce) : ''} · ${z.cas || ''}</div>
+          <div class="fmeta">S: ${z.sacharidy}g · B: ${z.bilkoviny}g · T: ${z.tuky}g</div>
+        </div>
+        <div class="food-kcal">${Math.round(z.kcal)}</div>
+        <button class="food-del" onclick="deleteEntry('${key}',${i})">×</button>
+      </div>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div id="install-banner"></div>
+
+    <div class="card">
+      <div class="card-title">Dnešní kalorie</div>
+      <div id="kcal-section">
+        <div id="ring-wrap">
+          <svg width="110" height="110" viewBox="0 0 110 110">
+            <circle class="ring-bg" cx="55" cy="55" r="${R}"/>
+            <circle class="ring-fg" cx="55" cy="55" r="${R}"
+              stroke="${ringColor}"
+              stroke-dasharray="${circ}"
+              stroke-dashoffset="${circ - dash}"/>
+          </svg>
+          <div id="ring-label">
+            <div class="big" style="color:${ringColor}">${Math.round(pct*100)}%</div>
+            <div class="sm">cíle</div>
+          </div>
+        </div>
+        <div id="kcal-info">
+          <div class="kcal-num" style="color:${ringColor}">${Math.round(t.kcal)}</div>
+          <div class="kcal-goal">z ${c.kcal} kcal</div>
+          <div class="kcal-left" style="color:${pct>=1?'#EF476F':'#06D6A0'}">
+            ${pct >= 1 ? `▲ ${Math.round(t.kcal - c.kcal)} kcal over` : `▼ zbývá ${Math.round(left)} kcal`}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="macros">
+      ${['sacharidy','bilkoviny','tuky'].map(m => {
+        const colors = { sacharidy:'#FFD166', bilkoviny:'#06D6A0', tuky:'#EF476F' };
+        const labels = { sacharidy:'Sacharidy', bilkoviny:'Bílkoviny', tuky:'Tuky' };
+        const val = t[m], goal = c[m] || 1;
+        const p = Math.min(val/goal, 1);
+        return `<div class="macro-card">
+          <div class="m-val" style="color:${colors[m]}">${val.toFixed(1)}</div>
+          <div class="m-lbl">${labels[m]}</div>
+          <div class="m-goal">${Math.round(p*100)}% z ${goal}g</div>
+          <div class="macro-bar-wrap"><div class="macro-bar" style="width:${p*100}%;background:${colors[m]}"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Jídla — ${fmtDate(currentDate)}</div>
+      ${foodHTML}
+    </div>`;
+
+  maybeShowInstall();
+}
+
+function deleteEntry(key, idx) {
+  DATA.zaznamy[key].splice(idx, 1);
+  saveData();
+  renderOverview();
+  toast('Smazáno');
+}
+
+// ── ADD ─────────────────────────────────────────────────────────────
+function renderAdd() {
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="card-title">Přidat jídlo</div>
+
+      <div class="field">
+        <label>Název jídla</label>
+        <input id="f-name" type="text" placeholder="Např. Kuřecí prsa" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>Typ jídla</label>
+        <select id="f-type">
+          <option>Snídaně</option><option selected>Oběd</option>
+          <option>Přesnídávka</option><option>Svačina</option>
+          <option>Večeře</option><option>Jiné</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Kalorie (kcal)</label>
+        <input id="f-kcal" type="number" inputmode="decimal" placeholder="0" min="0">
+      </div>
+
+      <div class="field">
+        <label>Makronutrienty (g)</label>
+        <div class="macro-grid">
+          <input id="f-sach" type="number" inputmode="decimal" placeholder="Sacharidy" min="0">
+          <input id="f-bilk" type="number" inputmode="decimal" placeholder="Bílkoviny" min="0">
+          <input id="f-tuk"  type="number" inputmode="decimal" placeholder="Tuky" min="0">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Porce / množství</label>
+        <input id="f-porce" type="text" placeholder="Např. 200g, 1 ks" autocomplete="off">
+      </div>
+
+      <button class="btn-primary" onclick="submitFood()">Přidat záznam</button>
+      <button class="btn-secondary" onclick="showTab('overview')">Zrušit</button>
+    </div>
+
+    <div class="card" style="margin-top:4px">
+      <div class="card-title">Rychlé přidání</div>
+      ${quickFoods().map(q => `
+        <div class="food-item" onclick="quickAdd(${JSON.stringify(q).replace(/"/g,'&quot;')})">
+          <div class="food-icon" style="background:#ffffff11">${q.icon}</div>
+          <div class="food-info">
+            <div class="fname">${q.nazev}</div>
+            <div class="fmeta">${q.kcal} kcal · S:${q.sacharidy}g B:${q.bilkoviny}g T:${q.tuky}g</div>
+          </div>
+          <div style="color:var(--sub);font-size:20px">+</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function quickFoods() {
+  return [
+    { icon:'🍳', nazev:'Vejce vařené (2ks)', kcal:155, sacharidy:1.1, bilkoviny:13, tuky:10.6, typ:'Snídaně', porce:'2 ks' },
+    { icon:'🍗', nazev:'Kuřecí prsa (150g)', kcal:165, sacharidy:0, bilkoviny:31, tuky:3.6, typ:'Oběd', porce:'150g' },
+    { icon:'🥛', nazev:'Řecký jogurt (200g)', kcal:130, sacharidy:7, bilkoviny:22, tuky:0.7, typ:'Svačina', porce:'200g' },
+    { icon:'🍌', nazev:'Banán střední', kcal:89, sacharidy:23, bilkoviny:1.1, tuky:0.3, typ:'Přesnídávka', porce:'1 ks' },
+    { icon:'🥜', nazev:'Mandle (30g)', kcal:173, sacharidy:5, bilkoviny:6, tuky:15, typ:'Svačina', porce:'30g' },
+    { icon:'🥗', nazev:'Salát se zeleninou', kcal:45, sacharidy:8, bilkoviny:2, tuky:0.5, typ:'Oběd', porce:'200g' },
+  ];
+}
+
+function quickAdd(q) {
+  addEntry(q.nazev, q.kcal, q.sacharidy, q.bilkoviny, q.tuky, q.typ, q.porce);
+}
+
+function submitFood() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { alert('Zadejte název jídla.'); return; }
+  const kcal = parseFloat(document.getElementById('f-kcal').value) || 0;
+  const sach = parseFloat(document.getElementById('f-sach').value) || 0;
+  const bilk = parseFloat(document.getElementById('f-bilk').value) || 0;
+  const tuk  = parseFloat(document.getElementById('f-tuk').value) || 0;
+  const typ  = document.getElementById('f-type').value;
+  const porce= document.getElementById('f-porce').value.trim();
+  addEntry(name, kcal, sach, bilk, tuk, typ, porce);
+}
+
+function addEntry(nazev, kcal, sach, bilk, tuk, typ, porce) {
+  const key = dayKey(currentDate);
+  if (!DATA.zaznamy[key]) DATA.zaznamy[key] = [];
+  const now = new Date();
+  DATA.zaznamy[key].push({
+    nazev, kcal: +kcal, sacharidy: +sach, bilkoviny: +bilk, tuky: +tuk,
+    typ: typ || 'Jiné', porce: porce || '',
+    cas: now.toTimeString().slice(0,5)
+  });
+  saveData();
+  toast('✅ ' + nazev + ' přidáno');
+  showTab('overview');
+}
+
+// ── HISTORY ─────────────────────────────────────────────────────────
+function renderHistory() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let rows = '';
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const k = dayKey(d);
+    const t = sumDay(k);
+    const items = DATA.zaznamy[k] || [];
+    const pct = DATA.cile.kcal ? Math.min(t.kcal / DATA.cile.kcal, 1) : 0;
+    const col = pct < 0.7 ? '#8A8FA8' : pct < 1 ? '#06D6A0' : '#EF476F';
+    const isToday = i === 0;
+    rows += `
+      <div class="hist-row" onclick="goToDay('${k}')">
+        <div>
+          <div class="hist-date ${isToday?'today':''}">${isToday ? 'Dnes' : d.toLocaleDateString('cs-CZ',{weekday:'short',day:'numeric',month:'short'})}</div>
+          <div class="hist-sub">${items.length} jídel · S:${t.sacharidy.toFixed(0)}g B:${t.bilkoviny.toFixed(0)}g T:${t.tuky.toFixed(0)}g</div>
+        </div>
+        <div style="text-align:right">
+          <div class="hist-kcal" style="color:${col}">${Math.round(t.kcal)}</div>
+          <div class="hist-bar-wrap"><div class="hist-bar" style="width:${pct*100}%;background:${col}"></div></div>
+        </div>
+      </div>`;
+  }
+  document.getElementById('content').innerHTML = `
+    <div class="card"><div class="card-title">Posledních 30 dní</div>${rows}</div>`;
+}
+
+function goToDay(key) {
+  currentDate = new Date(key + 'T00:00:00');
+  showTab('overview');
+}
+
+// ── STATS ────────────────────────────────────────────────────────────
+function renderStats() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const k = dayKey(d);
+    const t = sumDay(k);
+    if ((DATA.zaznamy[k]||[]).length > 0) days.push({ d, k, t });
+  }
+
+  if (days.length === 0) {
+    document.getElementById('content').innerHTML = `<div class="empty"><div class="e-icon">📈</div><p>Přidejte záznamy,<br>aby se statistiky zobrazily.</p></div>`;
+    return;
+  }
+
+  const n = days.length;
+  const avg = k => days.reduce((s,d) => s + d.t[k], 0) / n;
+  const avgKcal = avg('kcal'), avgS = avg('sacharidy'), avgB = avg('bilkoviny'), avgT = avg('tuky');
+
+  const maxKcal = Math.max(...days.map(d => d.t.kcal), DATA.cile.kcal);
+  const bars = days.map(d => {
+    const pct = maxKcal ? d.t.kcal / maxKcal : 0;
+    const col = d.t.kcal <= DATA.cile.kcal ? '#06D6A0' : '#EF476F';
+    return `<div class="bar-col">
+      <div class="bar" style="height:${Math.max(pct*88,2)}px;background:${col}"></div>
+      <div class="bar-lbl">${d.d.getDate()}.${d.d.getMonth()+1}</div>
+    </div>`;
+  }).join('');
+
+  const streakDays = calcStreak();
+
+  document.getElementById('content').innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="s-lbl">Průměr kcal</div><div class="s-val" style="color:#FF6B35">${Math.round(avgKcal)}</div><div class="s-unit">kcal/den</div></div>
+      <div class="stat-card"><div class="s-lbl">Série dní</div><div class="s-val" style="color:#FFD166">${streakDays}</div><div class="s-unit">dní v řadě</div></div>
+      <div class="stat-card"><div class="s-lbl">Sacharidy Ø</div><div class="s-val" style="color:#FFD166">${avgS.toFixed(1)}</div><div class="s-unit">g/den</div></div>
+      <div class="stat-card"><div class="s-lbl">Bílkoviny Ø</div><div class="s-val" style="color:#06D6A0">${avgB.toFixed(1)}</div><div class="s-unit">g/den</div></div>
+      <div class="stat-card"><div class="s-lbl">Tuky Ø</div><div class="s-val" style="color:#EF476F">${avgT.toFixed(1)}</div><div class="s-unit">g/den</div></div>
+      <div class="stat-card"><div class="s-lbl">Dnů dat</div><div class="s-val" style="color:#4895EF">${n}</div><div class="s-unit">ze 14</div></div>
+    </div>
+    <div id="chart-wrap">
+      <h3>Kalorie — posledních 14 dní</h3>
+      <div id="bar-chart">${bars}</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:8px">
+        <span style="color:#06D6A0">■</span> V cíli &nbsp;
+        <span style="color:#EF476F">■</span> Překročeno &nbsp;
+        — Cíl: ${DATA.cile.kcal} kcal
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Průměrné makro rozdělení</div>
+      ${macroBreakdown(avgS, avgB, avgT)}
+    </div>`;
+}
+
+function macroBreakdown(s, b, t) {
+  const total = s*4 + b*4 + t*9 || 1;
+  const ps = Math.round(s*4/total*100), pb = Math.round(b*4/total*100), pt = Math.round(t*9/total*100);
+  return `
+    <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;margin:8px 0">
+      <div style="width:${ps}%;background:#FFD166"></div>
+      <div style="width:${pb}%;background:#06D6A0"></div>
+      <div style="width:${pt}%;background:#EF476F"></div>
+    </div>
+    <div style="display:flex;gap:16px;font-size:12px;margin-top:6px">
+      <span><span style="color:#FFD166">■</span> Sacharidy ${ps}%</span>
+      <span><span style="color:#06D6A0">■</span> Bílkoviny ${pb}%</span>
+      <span><span style="color:#EF476F">■</span> Tuky ${pt}%</span>
+    </div>`;
+}
+
+function calcStreak() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    if ((DATA.zaznamy[dayKey(d)] || []).length > 0) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ── GOALS ────────────────────────────────────────────────────────────
+function renderGoals() {
+  const c = DATA.cile;
+  document.getElementById('content').innerHTML = `
+    <div class="card goals-section">
+      <h2>Denní cíle</h2>
+      <div class="field"><label>Kalorie (kcal)</label>
+        <input id="g-kcal" type="number" inputmode="decimal" value="${c.kcal}"></div>
+      <div class="field"><label>Sacharidy (g)</label>
+        <input id="g-sach" type="number" inputmode="decimal" value="${c.sacharidy}"></div>
+      <div class="field"><label>Bílkoviny (g)</label>
+        <input id="g-bilk" type="number" inputmode="decimal" value="${c.bilkoviny}"></div>
+      <div class="field"><label>Tuky (g)</label>
+        <input id="g-tuk" type="number" inputmode="decimal" value="${c.tuky}"></div>
+      <button class="btn-primary" onclick="saveGoals()">Uložit cíle</button>
+    </div>
+
+    <div class="card" style="margin-top:4px">
+      <div class="card-title">Informace</div>
+      <p style="font-size:13px;color:var(--sub);line-height:1.7">
+        Data jsou uložena lokálně v prohlížeči. Aby aplikace fungovala offline jako nativní appka na iPhone:
+        <br><br>
+        1. Otevři tuto stránku v <strong>Safari</strong><br>
+        2. Klikni na ikonu <strong>Sdílet ↑</strong><br>
+        3. Zvolte <strong>Přidat na plochu</strong>
+      </p>
+    </div>`;
+}
+
+function saveGoals() {
+  DATA.cile.kcal      = parseFloat(document.getElementById('g-kcal').value) || 2000;
+  DATA.cile.sacharidy = parseFloat(document.getElementById('g-sach').value) || 250;
+  DATA.cile.bilkoviny = parseFloat(document.getElementById('g-bilk').value) || 150;
+  DATA.cile.tuky      = parseFloat(document.getElementById('g-tuk').value) || 65;
+  saveData();
+  toast('✅ Cíle uloženy');
+}
+
+// ── Install banner ───────────────────────────────────────────────────
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  maybeShowInstall();
+});
+function maybeShowInstall() {
+  const b = document.getElementById('install-banner');
+  if (!b) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (isStandalone) { b.style.display = 'none'; return; }
+  if (isIOS) {
+    b.style.display = 'flex';
+    b.innerHTML = `<div class="ib-icon">📲</div><div class="ib-text"><p>Přidat na plochu</p><span>Klikni Sdílet ↑ → Přidat na plochu</span></div>`;
+  } else if (deferredPrompt) {
+    b.style.display = 'flex';
+    b.innerHTML = `<div class="ib-icon">📲</div><div class="ib-text"><p>Nainstalovat aplikaci</p><span>Funguje offline</span></div><button onclick="installPWA()">Instalovat</button>`;
+  }
+}
+function installPWA() {
+  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function escH(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Service Worker ───────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
+updateHeader();
+renderOverview();
+</script>
+</body>
+</html>
