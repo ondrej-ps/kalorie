@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kalorie">
 <meta name="theme-color" content="#0F1117">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="icon-192.svg">
 <title>KalorieTracker</title>
 <style>
@@ -355,6 +355,224 @@ function deleteEntry(key, idx) {
   toast('Smazáno');
 }
 
+// ── Nutriční databáze (hodnoty na 100 g / standardní porci) ──────────
+// Formát: [název, aliasy, kcal, sacharidy, bílkoviny, tuky, porce_g, icon, typ]
+const FOOD_DB = [
+  // Pečivo & obiloviny
+  ['žitný chléb',['žitný','ržný chléb','chleba žitný'],215,41,7.5,1.9,60,'🍞','Snídaně'],
+  ['bílý chléb',['chléb bílý','toastový chléb','toast'],265,49,8,2.4,60,'🍞','Snídaně'],
+  ['celozrnný chléb',['celozrnné pečivo','graham'],230,42,9,2.5,60,'🍞','Snídaně'],
+  ['rohlík',['houska','veky'],285,56,9,2,50,'🥖','Snídaně'],
+  ['bageta',['francouzská bageta'],270,54,9,1.5,80,'🥖','Oběd'],
+  ['ovesné vločky',['oatmeal','ovesná kaše','müsli'],370,60,13,7,60,'🌾','Snídaně'],
+  ['müsli',['granola','cereálie'],380,65,8,6,60,'🥣','Snídaně'],
+  ['rýže bílá',['rýže uvařená','bílá rýže'],130,28,2.7,0.3,150,'🍚','Oběd'],
+  ['rýže hnědá',['celozrnná rýže'],112,23,2.6,0.9,150,'🍚','Oběd'],
+  ['těstoviny',['špagety','fusilli','penne','makarony'],158,31,5.5,0.9,180,'🍝','Oběd'],
+  ['brambory vařené',['brambory','bramborová kaše'],77,17,2,0.1,200,'🥔','Oběd'],
+  ['bramborová kaše',['kaše z brambor'],95,19,2.5,2,200,'🥔','Oběd'],
+  ['hranolky',['french fries','smažené brambory'],320,39,3.8,17,150,'🍟','Oběd'],
+  ['knedlík houskový',['houskový knedlík','knedlík'],200,40,6.5,2,150,'🍡','Oběd'],
+  ['knedlík bramborový',['bramborový knedlík'],120,24,3,0.5,150,'🍡','Oběd'],
+  ['kuskus',['couscous'],195,36,6,1.5,150,'🫘','Oběd'],
+  ['quinoa',['quinoa vařená'],120,21,4.4,1.9,150,'🌾','Oběd'],
+
+  // Maso & ryby
+  ['kuřecí prsa',['kuře prsa','chicken breast','kuřecí'],165,0,31,3.6,150,'🍗','Oběd'],
+  ['kuřecí stehno',['stehno kuřecí','kuřecí čtvrtka'],209,0,26,11,150,'🍗','Oběd'],
+  ['vepřová kotleta',['vepřové','kotleta'],242,0,27,14,150,'🥩','Oběd'],
+  ['vepřová panenka',['panenka vepřová'],143,0,22,5.6,150,'🥩','Oběd'],
+  ['hovězí steak',['steak','hovězí','biftek'],217,0,26,12,180,'🥩','Oběd'],
+  ['hovězí guláš',['guláš','gulášová polévka'],180,8,18,8,300,'🍲','Oběd'],
+  ['svíčková',['svíčková na smetaně'],220,10,18,12,300,'🥩','Oběd'],
+  ['losos',['lososový filet','salmon'],206,0,20,13,150,'🐟','Oběd'],
+  ['tuňák v oleji',['tuna','tuňák konzerva'],200,0,25,10,100,'🐟','Oběd'],
+  ['tuňák ve vlastní šťávě',['tuňák light'],116,0,26,1,100,'🐟','Oběd'],
+  ['treska',['filé treska','pollock'],82,0,18,0.7,150,'🐟','Oběd'],
+  ['šunka vařená',['šunka','dětská šunka'],107,1.5,17,3.5,80,'🥩','Jiné'],
+  ['salám',['salámy','párek','uzeniny'],350,2,15,32,50,'🌭','Jiné'],
+  ['párek',['párek v rohlíku','hot dog'],280,3,12,25,60,'🌭','Jiné'],
+  ['slanina',['bacon'],541,0.6,37,42,30,'🥓','Snídaně'],
+  ['krevety',['garnáti','shrimp'],99,0.9,24,0.3,150,'🦐','Oběd'],
+
+  // Vejce & mléčné
+  ['vejce vařené',['vajíčko','vejce'],155,1.1,13,10.6,100,'🥚','Snídaně'],
+  ['vejce míchaná',['scrambled eggs','míchanice'],158,1.2,11,12,100,'🍳','Snídaně'],
+  ['omeleta',['omelette'],154,1,11,12,120,'🍳','Snídaně'],
+  ['mléko polotučné',['mléko','polotučné mléko'],46,4.8,3.2,1.5,250,'🥛','Snídaně'],
+  ['plnotučné mléko',['plnotučné','whole milk'],61,4.7,3.2,3.3,250,'🥛','Snídaně'],
+  ['jogurt bílý',['bílý jogurt','plain yogurt'],59,4,3.5,3,150,'🫙','Snídaně'],
+  ['řecký jogurt',['greek yogurt','skyr'],97,4,9,5,150,'🥛','Svačina'],
+  ['tvaroh nízkotučný',['tvaroh','cottage cheese'],72,3,15,0.3,150,'🫙','Snídaně'],
+  ['sýr eidam',['eidam','eidamský sýr'],291,0,28,19,50,'🧀','Jiné'],
+  ['sýr gouda',['gouda'],356,2.2,25,27,50,'🧀','Jiné'],
+  ['sýr cottage',['cottage cheese','tvarohový sýr'],103,3.4,11,4.5,100,'🧀','Jiné'],
+  ['smetana',['smetana ke šlehání','šlehačka'],296,3.6,2.3,30,30,'🥛','Jiné'],
+  ['máslo',['butter','přepuštěné máslo'],717,0.6,0.9,81,10,'🧈','Jiné'],
+  ['tvarůžky',['olomoucké tvarůžky'],107,0,28,0.1,50,'🧀','Jiné'],
+  ['philadelphia',['cream cheese','smetanový sýr'],342,4,6,33,30,'🧀','Snídaně'],
+
+  // Zelenina
+  ['rajče',['rajčata','tomato'],18,3.5,0.9,0.2,150,'🍅','Jiné'],
+  ['okurka',['okurky','cucumber'],15,2.2,0.7,0.1,150,'🥒','Jiné'],
+  ['paprika červená',['paprika','bell pepper'],31,6,1,0.3,150,'🫑','Jiné'],
+  ['mrkev',['karotka','carrot'],41,10,0.9,0.2,100,'🥕','Jiné'],
+  ['brokolice',['broccoli'],34,7,2.8,0.4,200,'🥦','Příloha'],
+  ['špenát',['spinach'],23,1.4,2.9,0.4,150,'🥬','Jiné'],
+  ['hlávkový salát',['ledový salát','zelený salát'],15,2.2,1.4,0.2,100,'🥬','Jiné'],
+  ['cibule',['onion'],40,9.3,1.1,0.1,50,'🧅','Jiné'],
+  ['česnek',['garlic'],149,33,6.4,0.5,5,'🧄','Jiné'],
+  ['kukuřice',['corn','kukuřice konzervovaná'],86,19,3.2,1.2,100,'🌽','Jiné'],
+  ['hrášek',['zelený hrášek','peas'],81,14,5.4,0.4,100,'🫛','Jiné'],
+  ['fazole červené',['fazole','kidney beans'],127,22,8.7,0.5,150,'🫘','Oběd'],
+  ['čočka vařená',['lentils','čočková polévka'],116,20,9,0.4,150,'🫘','Oběd'],
+  ['cizrna',['chickpeas','hummus'],164,27,8.9,2.6,150,'🫘','Oběd'],
+  ['avokádo',['avocado'],160,9,2,15,80,'🥑','Svačina'],
+
+  // Ovoce
+  ['banán',['banana'],89,23,1.1,0.3,120,'🍌','Svačina'],
+  ['jablko',['apple','jabloň'],52,14,0.3,0.2,150,'🍎','Svačina'],
+  ['pomeranč',['orange','mandarinka'],47,12,0.9,0.1,150,'🍊','Svačina'],
+  ['jahody',['strawberries','jahoda'],32,7.7,0.7,0.3,150,'🍓','Svačina'],
+  ['hrozny',['víno hrozny','grapes'],69,18,0.7,0.2,150,'🍇','Svačina'],
+  ['kiwi',['kiwifruit'],61,15,1.1,0.5,100,'🥝','Svačina'],
+  ['meloun',['watermelon','vodní meloun'],30,7.6,0.6,0.2,200,'🍉','Svačina'],
+  ['borůvky',['blueberries','borůvka'],57,14,0.7,0.3,100,'🫐','Svačina'],
+  ['mango',['mango tropické'],60,15,0.8,0.4,150,'🥭','Svačina'],
+
+  // Ořechy & semena
+  ['mandle',['almonds'],579,22,21,50,30,'🌰','Svačina'],
+  ['vlašské ořechy',['walnuts','ořechy'],654,14,15,65,30,'🌰','Svačina'],
+  ['arašídy',['peanuts','arašídové máslo'],567,16,26,49,30,'🥜','Svačina'],
+  ['slunečnicová semínka',['semínka','sunflower seeds'],584,20,21,51,30,'🌻','Svačina'],
+  ['lněná semínka',['lněné semínko','flaxseed'],534,29,18,42,15,'🌿','Jiné'],
+
+  // Polévky & hotová jídla
+  ['kuřecí polévka',['slepičí vývar','chicken soup'],25,2,2,0.8,350,'🍲','Oběd'],
+  ['hovězí vývar',['bujón','vývar'],15,1,1.5,0.3,350,'🍲','Oběd'],
+  ['zelňačka',['kyselo zelná polévka'],60,7,3,2,350,'🍲','Oběd'],
+  ['pizza margherita',['pizza','pizza sýr'],266,33,11,10,300,'🍕','Oběd'],
+  ['hamburger',['burger','cheeseburger'],295,24,17,14,200,'🍔','Oběd'],
+  ['hot dog',['hotdog'],290,25,11,16,150,'🌭','Jiné'],
+  ['sushi',['nigiri','maki','sashimi'],150,25,8,1.5,200,'🍱','Oběd'],
+  ['kebab',['döner kebab','shawarma'],280,28,18,11,300,'🌯','Oběd'],
+
+  // Sladkosti & snacks
+  ['čokoláda mléčná',['milka','čokoláda'],535,59,8,30,40,'🍫','Svačina'],
+  ['čokoláda hořká',['dark chocolate','hořká čokoláda'],598,46,5,43,40,'🍫','Svačina'],
+  ['sušenky',['cookies','piškoty','digestive'],450,65,6,18,30,'🍪','Svačina'],
+  ['croissant',['křupavý croissant'],406,46,8.2,21,80,'🥐','Snídaně'],
+  ['dort',['koláč','cake','cheesecake'],350,48,5,16,100,'🎂','Jiné'],
+  ['zmrzlina',['ice cream','vanilková zmrzlina'],207,24,3.5,11,100,'🍦','Svačina'],
+  ['med',['honey'],304,82,0.3,0,15,'🍯','Snídaně'],
+  ['džem',['marmeláda','jam'],250,65,0.5,0.1,20,'🍓','Snídaně'],
+
+  // Nápoje
+  ['pomerančový džus',['OJ','džus pomeranč'],45,10,0.7,0.2,250,'🧃','Snídaně'],
+  ['coca cola',['kola','pepsi','coke'],42,11,0,0,330,'🥤','Jiné'],
+  ['pivo',['pivo 10°','pivo 12°','beer'],43,3.6,0.5,0,500,'🍺','Jiné'],
+  ['víno červené',['red wine','cabernet'],85,2.6,0.1,0,150,'🍷','Jiné'],
+  ['káva s mlékem',['latte','cappuccino','flat white'],60,6,3,2.5,300,'☕','Jiné'],
+  ['proteinový shake',['protein shake','whey protein'],150,8,25,3,300,'💪','Svačina'],
+
+  // Tuky & omáčky
+  ['olivový olej',['olive oil','extra virgin'],884,0,0,100,10,'🫒','Jiné'],
+  ['slunečnicový olej',['rostlinný olej','olej'],884,0,0,100,10,'🫙','Jiné'],
+  ['majonéza',['mayo','majonézový dresink'],680,2.8,1.1,75,20,'🫙','Jiné'],
+  ['kečup',['ketchup'],112,26,1.5,0.1,30,'🍅','Jiné'],
+  ['hořčice',['mustard'],66,6,4.4,3.3,10,'🫙','Jiné'],
+];
+
+// ── Fuzzy vyhledávání v databázi ──────────────────────────────────────
+function normalize(s) {
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 ]/g,'').trim();
+}
+
+function scoreMatch(query, entry) {
+  const q = normalize(query);
+  const name = normalize(entry[0]);
+  const aliases = (entry[1] || []).map(normalize);
+  const all = [name, ...aliases];
+
+  // Exact match
+  if (all.some(a => a === q)) return 1000;
+  // Starts with
+  if (all.some(a => a.startsWith(q))) return 800;
+  if (all.some(a => q.startsWith(a))) return 750;
+  // Contains full query
+  if (all.some(a => a.includes(q))) return 600;
+  if (all.some(a => q.includes(a))) return 550;
+
+  // Word-level matching
+  const qWords = q.split(' ').filter(w => w.length > 2);
+  let wordScore = 0;
+  for (const w of qWords) {
+    if (all.some(a => a.includes(w))) wordScore += 100;
+  }
+  // Check if entry words appear in query
+  const eWords = name.split(' ').filter(w => w.length > 2);
+  for (const w of eWords) {
+    if (q.includes(w)) wordScore += 80;
+  }
+  return wordScore;
+}
+
+function findFood(query, portionHint) {
+  const scored = FOOD_DB.map(e => ({ e, score: scoreMatch(query, e) }))
+    .filter(x => x.score > 0)
+    .sort((a,b) => b.score - a.score);
+
+  if (scored.length === 0) return null;
+  const best = scored[0].e;
+
+  // Parse porce g z query nebo portionHint
+  const portionText = portionHint || query;
+  const gMatch = portionText.match(/(\d+)\s*g/i);
+  const pcsMatch = portionText.match(/(\d+)\s*(ks|kus|plát|krajíc|lžíc|lžička)/i);
+  let multiplier = 1;
+  const defaultG = best[6]; // standardní porce v gramech
+
+  if (gMatch) {
+    multiplier = parseInt(gMatch[1]) / 100; // DB hodnoty jsou na 100g
+  } else if (pcsMatch) {
+    multiplier = parseInt(pcsMatch[1]);
+  } else {
+    multiplier = defaultG / 100;
+  }
+
+  const round1 = v => Math.round(v * 10) / 10;
+  return {
+    kcal:      round1(best[2] * multiplier),
+    sacharidy: round1(best[3] * multiplier),
+    bilkoviny: round1(best[4] * multiplier),
+    tuky:      round1(best[5] * multiplier),
+    porce:     gMatch ? gMatch[0] : pcsMatch ? pcsMatch[0] : defaultG + 'g',
+    typ:       best[8],
+    icon:      best[7],
+    _score:    scored[0].score,
+    _suggest:  scored.slice(1,4).map(x => x.e[0]),
+  };
+}
+
+// ── Lookup entry point ────────────────────────────────────────────────
+async function lookupNutrition(foodName, porce) {
+  const result = findFood(foodName, porce);
+  if (result && result._score >= 100) return result;
+
+  // Záloha: pokud není v DB, vrátíme rozumný odhad
+  // (bez síťového volání — CORS by ho blokoval)
+  if (result) return result; // slabá shoda je lepší než nic
+
+  // Absolutně neznámé jídlo → generický odhad 200 kcal
+  return {
+    kcal: 200, sacharidy: 25, bilkoviny: 10, tuky: 7,
+    porce: porce || '100g', typ: 'Jiné', icon: '🍽️', _score: 0,
+    _suggest: [],
+  };
+}
+
 // ── ADD ─────────────────────────────────────────────────────────────
 function renderAdd() {
   document.getElementById('content').innerHTML = `
@@ -363,39 +581,65 @@ function renderAdd() {
 
       <div class="field">
         <label>Název jídla</label>
-        <input id="f-name" type="text" placeholder="Např. Kuřecí prsa" autocomplete="off">
-      </div>
-
-      <div class="field">
-        <label>Typ jídla</label>
-        <select id="f-type">
-          <option>Snídaně</option><option selected>Oběd</option>
-          <option>Přesnídávka</option><option>Svačina</option>
-          <option>Večeře</option><option>Jiné</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Kalorie (kcal)</label>
-        <input id="f-kcal" type="number" inputmode="decimal" placeholder="0" min="0">
-      </div>
-
-      <div class="field">
-        <label>Makronutrienty (g)</label>
-        <div class="macro-grid">
-          <input id="f-sach" type="number" inputmode="decimal" placeholder="Sacharidy" min="0">
-          <input id="f-bilk" type="number" inputmode="decimal" placeholder="Bílkoviny" min="0">
-          <input id="f-tuk"  type="number" inputmode="decimal" placeholder="Tuky" min="0">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="f-name" type="text" placeholder="Např. kuřecí prsa, banán, pizza..." autocomplete="off"
+                 style="flex:1" onkeydown="if(event.key==='Enter')lookupAndFill()">
+          <button onclick="lookupAndFill()" id="btn-lookup"
+                  style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:0 16px;height:46px;font-size:20px;cursor:pointer;flex-shrink:0;transition:opacity .2s">
+            🔍
+          </button>
         </div>
+        <div id="lookup-status" style="font-size:12px;margin-top:6px;min-height:18px;color:var(--sub)"></div>
       </div>
 
       <div class="field">
-        <label>Porce / množství</label>
-        <input id="f-porce" type="text" placeholder="Např. 200g, 1 ks" autocomplete="off">
+        <label>Porce / množství <span style="color:var(--sub);font-weight:400">(nepovinné)</span></label>
+        <input id="f-porce" type="text" placeholder="Např. 200g, 1 ks, velká — upřesní výpočet"
+               autocomplete="off">
       </div>
 
-      <button class="btn-primary" onclick="submitFood()">Přidat záznam</button>
-      <button class="btn-secondary" onclick="showTab('overview')">Zrušit</button>
+      <div id="result-card" style="display:none">
+        <div style="height:1px;background:var(--border);margin:4px 0 16px"></div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div id="res-icon" style="font-size:32px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--card2);border-radius:12px"></div>
+          <div>
+            <div id="res-name" style="font-size:15px;font-weight:700"></div>
+            <div id="res-porce" style="font-size:12px;color:var(--sub);margin-top:2px"></div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div id="res-kcal" style="font-size:26px;font-weight:800;color:var(--accent);line-height:1"></div>
+            <div style="font-size:11px;color:var(--sub)">kcal</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+          <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+            <div id="res-s" style="font-size:18px;font-weight:700;color:#FFD166"></div>
+            <div style="font-size:10px;color:var(--sub);margin-top:2px;text-transform:uppercase;letter-spacing:.4px">Sacharidy g</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+            <div id="res-b" style="font-size:18px;font-weight:700;color:#06D6A0"></div>
+            <div style="font-size:10px;color:var(--sub);margin-top:2px;text-transform:uppercase;letter-spacing:.4px">Bílkoviny g</div>
+          </div>
+          <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
+            <div id="res-t" style="font-size:18px;font-weight:700;color:#EF476F"></div>
+            <div style="font-size:10px;color:var(--sub);margin-top:2px;text-transform:uppercase;letter-spacing:.4px">Tuky g</div>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.6">
+          ✦ Hodnoty dopočítány AI · Typ:
+          <select id="f-type" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:2px 6px;font-size:11px;margin-left:4px">
+            <option>Snídaně</option><option>Přesnídávka</option>
+            <option selected>Oběd</option><option>Svačina</option>
+            <option>Večeře</option><option>Jiné</option>
+          </select>
+        </div>
+
+        <button class="btn-primary" onclick="confirmAdd()">✓ Přidat do deníku</button>
+        <button class="btn-secondary" onclick="resetForm()">Zadat jiné jídlo</button>
+      </div>
     </div>
 
     <div class="card" style="margin-top:4px">
@@ -410,6 +654,69 @@ function renderAdd() {
           <div style="color:var(--sub);font-size:20px">+</div>
         </div>`).join('')}
     </div>`;
+}
+
+let _pendingEntry = null;
+
+async function lookupAndFill() {
+  const name  = document.getElementById('f-name').value.trim();
+  if (!name) { document.getElementById('lookup-status').textContent = '⚠ Zadejte název jídla.'; return; }
+  const porce = document.getElementById('f-porce').value.trim();
+
+  const btn = document.getElementById('btn-lookup');
+  const status = document.getElementById('lookup-status');
+  btn.textContent = '⏳'; btn.disabled = true;
+  status.innerHTML = '<span style="color:var(--accent)">🔍 Hledám výživové hodnoty…</span>';
+  document.getElementById('result-card').style.display = 'none';
+
+  try {
+    const d = await lookupNutrition(name, porce);
+    _pendingEntry = { nazev: name, ...d, porce: d.porce || porce };
+
+    document.getElementById('res-icon').textContent  = d.icon || '🍽️';
+    document.getElementById('res-name').textContent  = name;
+    document.getElementById('res-porce').textContent = d.porce || porce || 'standardní porce';
+    document.getElementById('res-kcal').textContent  = Math.round(d.kcal);
+    document.getElementById('res-s').textContent     = (+d.sacharidy).toFixed(1);
+    document.getElementById('res-b').textContent     = (+d.bilkoviny).toFixed(1);
+    document.getElementById('res-t').textContent     = (+d.tuky).toFixed(1);
+
+    const sel = document.getElementById('f-type');
+    if (d.typ) [...sel.options].forEach((o,i) => { if (o.value === d.typ) sel.selectedIndex = i; });
+
+    const conf = d._score >= 600 ? '✓ Nalezeno' : d._score >= 100 ? '~ Přibližná shoda' : '? Odhad';
+    const confCol = d._score >= 600 ? 'var(--green)' : d._score >= 100 ? '#FFD166' : '#EF476F';
+    let suggestHTML = '';
+    if (d._suggest && d._suggest.length && d._score < 600) {
+      suggestHTML = ' · Zkus: ' + d._suggest.slice(0,3).map(s =>
+        '<span onclick="document.getElementById(\'f-name\').value=\''+s+'\';lookupAndFill()" style="color:var(--accent);cursor:pointer;text-decoration:underline">'+s+'</span>'
+      ).join(', ');
+    }
+    status.innerHTML = '<span style="color:'+confCol+'">'+conf+'</span>'+suggestHTML;
+    document.getElementById('result-card').style.display = 'block';
+  } catch(e) {
+    status.innerHTML = '<span style="color:#EF476F">✗ Chyba: ' + e.message + '</span>';
+    console.error(e);
+  } finally {
+    btn.textContent = '🔍'; btn.disabled = false;
+  }
+}
+
+function confirmAdd() {
+  if (!_pendingEntry) return;
+  const typ = document.getElementById('f-type').value;
+  addEntry(_pendingEntry.nazev, _pendingEntry.kcal, _pendingEntry.sacharidy,
+           _pendingEntry.bilkoviny, _pendingEntry.tuky, typ, _pendingEntry.porce);
+  _pendingEntry = null;
+}
+
+function resetForm() {
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-porce').value = '';
+  document.getElementById('result-card').style.display = 'none';
+  document.getElementById('lookup-status').textContent = '';
+  _pendingEntry = null;
+  document.getElementById('f-name').focus();
 }
 
 function quickFoods() {
@@ -434,8 +741,8 @@ function submitFood() {
   const sach = parseFloat(document.getElementById('f-sach').value) || 0;
   const bilk = parseFloat(document.getElementById('f-bilk').value) || 0;
   const tuk  = parseFloat(document.getElementById('f-tuk').value) || 0;
-  const typ  = document.getElementById('f-type').value;
-  const porce= document.getElementById('f-porce').value.trim();
+  const typ  = document.getElementById('f-type') ? document.getElementById('f-type').value : 'Jiné';
+  const porce= document.getElementById('f-porce') ? document.getElementById('f-porce').value.trim() : '';
   addEntry(name, kcal, sach, bilk, tuk, typ, porce);
 }
 
@@ -644,7 +951,7 @@ function escH(s) {
 
 // ── Service Worker ───────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js', {scope: './'}).catch(() => {});
 }
 
 // ── Init ─────────────────────────────────────────────────────────────
