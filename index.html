@@ -553,6 +553,8 @@ function findFood(query, portionHint) {
     icon:      best[7],
     _score:    scored[0].score,
     _suggest:  scored.slice(1,4).map(x => x.e[0]),
+    _defaultG:   defaultG,
+    _defaultPcs: null,
   };
 }
 
@@ -580,40 +582,34 @@ function renderAdd() {
       <div class="card-title">Přidat jídlo</div>
 
       <div class="field">
-        <label>Název jídla</label>
+        <label>Co jsi jedl/a?</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <input id="f-name" type="text" placeholder="Např. kuřecí prsa, banán, pizza..." autocomplete="off"
-                 style="flex:1" onkeydown="if(event.key==='Enter')lookupAndFill()">
+          <input id="f-name" type="text" placeholder="Např. vejce, kuřecí prsa, banán…" autocomplete="off"
+                 style="flex:1" onkeydown="if(event.key==='Enter'){lookupAndFill();}">
           <button onclick="lookupAndFill()" id="btn-lookup"
-                  style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:0 16px;height:46px;font-size:20px;cursor:pointer;flex-shrink:0;transition:opacity .2s">
+                  style="background:var(--accent);color:#fff;border:none;border-radius:12px;padding:0 16px;height:46px;font-size:20px;cursor:pointer;flex-shrink:0">
             🔍
           </button>
         </div>
         <div id="lookup-status" style="font-size:12px;margin-top:6px;min-height:18px;color:var(--sub)"></div>
       </div>
 
-      <div class="field">
-        <label>Porce / množství <span style="color:var(--sub);font-weight:400">(nepovinné)</span></label>
-        <input id="f-porce" type="text" placeholder="Např. 200g, 1 ks, velká — upřesní výpočet"
-               autocomplete="off">
-      </div>
-
       <div id="result-card" style="display:none">
-        <div style="height:1px;background:var(--border);margin:4px 0 16px"></div>
+        <div style="height:1px;background:var(--border);margin:2px 0 14px"></div>
 
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-          <div id="res-icon" style="font-size:32px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--card2);border-radius:12px"></div>
-          <div>
-            <div id="res-name" style="font-size:15px;font-weight:700"></div>
-            <div id="res-porce" style="font-size:12px;color:var(--sub);margin-top:2px"></div>
+          <div id="res-icon" style="font-size:30px;width:46px;height:46px;display:flex;align-items:center;justify-content:center;background:var(--card2);border-radius:12px;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div id="res-name" style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+            <div id="res-porce-lbl" style="font-size:12px;color:var(--sub);margin-top:2px"></div>
           </div>
-          <div style="margin-left:auto;text-align:right">
-            <div id="res-kcal" style="font-size:26px;font-weight:800;color:var(--accent);line-height:1"></div>
+          <div style="text-align:right;flex-shrink:0">
+            <div id="res-kcal" style="font-size:28px;font-weight:800;color:var(--accent);line-height:1"></div>
             <div style="font-size:11px;color:var(--sub)">kcal</div>
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
           <div style="background:var(--card2);border-radius:10px;padding:10px;text-align:center">
             <div id="res-s" style="font-size:18px;font-weight:700;color:#FFD166"></div>
             <div style="font-size:10px;color:var(--sub);margin-top:2px;text-transform:uppercase;letter-spacing:.4px">Sacharidy g</div>
@@ -628,16 +624,33 @@ function renderAdd() {
           </div>
         </div>
 
-        <div style="font-size:11px;color:var(--sub);margin-bottom:14px;line-height:1.6">
-          ✦ Hodnoty dopočítány AI · Typ:
-          <select id="f-type" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:2px 6px;font-size:11px;margin-left:4px">
+        <div class="field">
+          <label>Uprav porci <span style="color:var(--sub);font-weight:400;font-size:11px">— kcal se přepočítají</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="f-porce" type="text" inputmode="decimal"
+                   placeholder="Např. 2 ks, 150g, 1 krajíc…"
+                   style="flex:1"
+                   oninput="recalcPorce(this.value)">
+            <button onclick="recalcPorce(document.getElementById('f-porce').value)"
+                    style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:0 14px;height:46px;font-size:13px;cursor:pointer;white-space:nowrap">
+              Přepočítat
+            </button>
+          </div>
+          <div id="porce-hint" style="font-size:11px;color:var(--sub);margin-top:5px">
+            Zadej počet kusů nebo gramy — hodnoty se přepočítají.
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:12px;color:var(--sub)">
+          <span>Typ:</span>
+          <select id="f-type" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 8px;font-size:12px">
             <option>Snídaně</option><option>Přesnídávka</option>
             <option selected>Oběd</option><option>Svačina</option>
             <option>Večeře</option><option>Jiné</option>
           </select>
         </div>
 
-        <button class="btn-primary" onclick="confirmAdd()">✓ Přidat do deníku</button>
+        <button class="btn-primary" id="btn-confirm" onclick="confirmAdd()">✓ Přidat do deníku</button>
         <button class="btn-secondary" onclick="resetForm()">Zadat jiné jídlo</button>
       </div>
     </div>
@@ -656,30 +669,43 @@ function renderAdd() {
     </div>`;
 }
 
+// Uložíme raw DB data na 100g pro přepočet
 let _pendingEntry = null;
+let _baseEntry100g = null; // hodnoty na 100g pro přepočet
 
 async function lookupAndFill() {
-  const name  = document.getElementById('f-name').value.trim();
+  const name = document.getElementById('f-name').value.trim();
   if (!name) { document.getElementById('lookup-status').textContent = '⚠ Zadejte název jídla.'; return; }
-  const porce = document.getElementById('f-porce').value.trim();
 
   const btn = document.getElementById('btn-lookup');
   const status = document.getElementById('lookup-status');
   btn.textContent = '⏳'; btn.disabled = true;
-  status.innerHTML = '<span style="color:var(--accent)">🔍 Hledám výživové hodnoty…</span>';
+  status.innerHTML = '<span style="color:var(--accent)">🔍 Hledám…</span>';
   document.getElementById('result-card').style.display = 'none';
 
   try {
-    const d = await lookupNutrition(name, porce);
-    _pendingEntry = { nazev: name, ...d, porce: d.porce || porce };
+    const d = await lookupNutrition(name, '');
 
-    document.getElementById('res-icon').textContent  = d.icon || '🍽️';
-    document.getElementById('res-name').textContent  = name;
-    document.getElementById('res-porce').textContent = d.porce || porce || 'standardní porce';
-    document.getElementById('res-kcal').textContent  = Math.round(d.kcal);
-    document.getElementById('res-s').textContent     = (+d.sacharidy).toFixed(1);
-    document.getElementById('res-b').textContent     = (+d.bilkoviny).toFixed(1);
-    document.getElementById('res-t').textContent     = (+d.tuky).toFixed(1);
+    // Uložíme hodnoty na 100g pro pozdější přepočet
+    _baseEntry100g = {
+      kcal100:      d.kcal * 100 / (d._defaultG || 100),
+      sacharidy100: d.sacharidy * 100 / (d._defaultG || 100),
+      bilkoviny100: d.bilkoviny * 100 / (d._defaultG || 100),
+      tuky100:      d.tuky * 100 / (d._defaultG || 100),
+      defaultG:     d._defaultG || 100,
+      defaultPcs:   d._defaultPcs || 1,
+      defaultLabel: d.porce || (d._defaultG + 'g'),
+    };
+
+    _pendingEntry = { nazev: name, ...d };
+
+    document.getElementById('res-icon').textContent   = d.icon || '🍽️';
+    document.getElementById('res-name').textContent   = name;
+    document.getElementById('res-porce-lbl').textContent = d.porce || (d._defaultG + 'g') || 'standardní porce';
+    document.getElementById('f-porce').value          = '';
+    document.getElementById('f-porce').placeholder    = 'Např. ' + (d._defaultPcs ? d._defaultPcs + ' ks, ' : '') + d._defaultG + 'g';
+
+    updateResultDisplay(d.kcal, d.sacharidy, d.bilkoviny, d.tuky);
 
     const sel = document.getElementById('f-type');
     if (d.typ) [...sel.options].forEach((o,i) => { if (o.value === d.typ) sel.selectedIndex = i; });
@@ -695,27 +721,94 @@ async function lookupAndFill() {
     status.innerHTML = '<span style="color:'+confCol+'">'+conf+'</span>'+suggestHTML;
     document.getElementById('result-card').style.display = 'block';
   } catch(e) {
-    status.innerHTML = '<span style="color:#EF476F">✗ Chyba: ' + e.message + '</span>';
-    console.error(e);
+    status.innerHTML = '<span style="color:#EF476F">✗ ' + e.message + '</span>';
   } finally {
     btn.textContent = '🔍'; btn.disabled = false;
   }
 }
 
+function updateResultDisplay(kcal, s, b, t) {
+  document.getElementById('res-kcal').textContent = Math.round(kcal);
+  document.getElementById('res-s').textContent    = (+s).toFixed(1);
+  document.getElementById('res-b').textContent    = (+b).toFixed(1);
+  document.getElementById('res-t').textContent    = (+t).toFixed(1);
+  if (_pendingEntry) {
+    _pendingEntry.kcal      = kcal;
+    _pendingEntry.sacharidy = +s;
+    _pendingEntry.bilkoviny = +b;
+    _pendingEntry.tuky      = +t;
+  }
+}
+
+function recalcPorce(val) {
+  if (!_baseEntry100g) return;
+  val = val.trim();
+  if (!val) {
+    // Bez zadání — vrátíme výchozí porci
+    const b = _baseEntry100g;
+    const mult = b.defaultG / 100;
+    updateResultDisplay(b.kcal100*mult, b.sacharidy100*mult, b.bilkoviny100*mult, b.tuky100*mult);
+    document.getElementById('res-porce-lbl').textContent = b.defaultLabel;
+    if (_pendingEntry) _pendingEntry.porce = b.defaultLabel;
+    document.getElementById('porce-hint').textContent = 'Hodnoty pro standardní porci.';
+    return;
+  }
+
+  const b = _baseEntry100g;
+  let grams = null;
+  let label = val;
+
+  // Parsování: "2 ks", "3ks", číslo → kusy, "150g", "150 g" → gramy
+  const gMatch  = val.match(/^(\d+(?:[.,]\d+)?)\s*g\b/i);
+  const kgMatch = val.match(/^(\d+(?:[.,]\d+)?)\s*kg\b/i);
+  const pcsMatch= val.match(/^(\d+(?:[.,]\d+)?)\s*(ks|kus|kusy|krajíc|plátek|lžíce|lžička|porce|bowl)?$/i);
+
+  if (kgMatch) {
+    grams = parseFloat(kgMatch[1].replace(',','.')) * 1000;
+    label = val;
+  } else if (gMatch) {
+    grams = parseFloat(gMatch[1].replace(',','.'));
+    label = val;
+  } else if (pcsMatch) {
+    const n = parseFloat(pcsMatch[1].replace(',','.'));
+    const unit = (pcsMatch[2] || 'ks').toLowerCase();
+    if (unit === 'lžíce') grams = n * 15;
+    else if (unit === 'lžička') grams = n * 5;
+    else grams = n * b.defaultG; // 1 ks = defaultG gramů
+    label = n + ' ' + (pcsMatch[2] || 'ks');
+  }
+
+  if (grams && grams > 0) {
+    const mult = grams / 100;
+    const r1 = v => Math.round(v*10)/10;
+    updateResultDisplay(b.kcal100*mult, r1(b.sacharidy100*mult), r1(b.bilkoviny100*mult), r1(b.tuky100*mult));
+    document.getElementById('res-porce-lbl').textContent = label;
+    document.getElementById('porce-hint').textContent = Math.round(grams) + 'g · přepočítáno z ' + b.defaultG + 'g/100g';
+    if (_pendingEntry) _pendingEntry.porce = label;
+  } else {
+    document.getElementById('porce-hint').textContent = '⚠ Nerozpoznaný formát — zadej např. "2 ks" nebo "150g"';
+  }
+}
+
 function confirmAdd() {
   if (!_pendingEntry) return;
+  // Zabráníme dvojitému odeslání (disable tlačítko)
+  const btn = document.getElementById('btn-confirm');
+  if (btn) { btn.disabled = true; btn.textContent = '✓ Přidáno'; }
   const typ = document.getElementById('f-type').value;
   addEntry(_pendingEntry.nazev, _pendingEntry.kcal, _pendingEntry.sacharidy,
-           _pendingEntry.bilkoviny, _pendingEntry.tuky, typ, _pendingEntry.porce);
+           _pendingEntry.bilkoviny, _pendingEntry.tuky, typ, _pendingEntry.porce || '');
   _pendingEntry = null;
+  _baseEntry100g = null;
 }
 
 function resetForm() {
   document.getElementById('f-name').value = '';
-  document.getElementById('f-porce').value = '';
+  document.getElementById('f-porce') && (document.getElementById('f-porce').value = '');
   document.getElementById('result-card').style.display = 'none';
   document.getElementById('lookup-status').textContent = '';
   _pendingEntry = null;
+  _baseEntry100g = null;
   document.getElementById('f-name').focus();
 }
 
