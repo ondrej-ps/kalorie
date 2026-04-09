@@ -625,19 +625,32 @@ function renderAdd() {
         </div>
 
         <div class="field">
-          <label>Uprav porci <span style="color:var(--sub);font-weight:400;font-size:11px">— kcal se přepočítají</span></label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="f-porce" type="text" inputmode="decimal"
-                   placeholder="Např. 2 ks, 150g, 1 krajíc…"
-                   style="flex:1"
-                   oninput="recalcPorce(this.value)">
-            <button onclick="recalcPorce(document.getElementById('f-porce').value)"
-                    style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:0 14px;height:46px;font-size:13px;cursor:pointer;white-space:nowrap">
-              Přepočítat
+          <label>Upravit množství <span style="color:var(--sub);font-weight:400;font-size:11px">— kcal se přepočítají živě</span></label>
+
+          <div style="display:flex;gap:6px;margin-bottom:10px">
+            <button id="unit-g" onclick="setUnit('g')"
+              style="flex:1;padding:9px 0;border-radius:10px;border:2px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+              Gramy (g)
+            </button>
+            <button id="unit-ks" onclick="setUnit('ks')"
+              style="flex:1;padding:9px 0;border-radius:10px;border:2px solid var(--border);background:var(--card2);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer">
+              Kusy (ks)
             </button>
           </div>
-          <div id="porce-hint" style="font-size:11px;color:var(--sub);margin-top:5px">
-            Zadej počet kusů nebo gramy — hodnoty se přepočítají.
+
+          <div style="display:flex;align-items:center;gap:0;background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+            <button onclick="stepPorce(-1)"
+              style="width:52px;height:52px;background:none;border:none;color:var(--text);font-size:26px;cursor:pointer;flex-shrink:0;border-right:1px solid var(--border)">−</button>
+            <input id="f-porce" type="number" inputmode="decimal" min="1" step="1" value="1"
+              style="flex:1;background:none;border:none;color:var(--text);font-size:22px;font-weight:700;text-align:center;padding:0;height:52px;outline:none"
+              oninput="recalcLive()">
+            <span id="unit-label" style="font-size:14px;color:var(--sub);padding:0 12px;flex-shrink:0">g</span>
+            <button onclick="stepPorce(1)"
+              style="width:52px;height:52px;background:none;border:none;color:var(--text);font-size:26px;cursor:pointer;flex-shrink:0;border-left:1px solid var(--border)">+</button>
+          </div>
+
+          <div id="porce-hint" style="font-size:12px;color:var(--sub);margin-top:8px;text-align:center">
+            100 g
           </div>
         </div>
 
@@ -699,13 +712,29 @@ async function lookupAndFill() {
 
     _pendingEntry = { nazev: name, ...d };
 
-    document.getElementById('res-icon').textContent   = d.icon || '🍽️';
-    document.getElementById('res-name').textContent   = name;
-    document.getElementById('res-porce-lbl').textContent = d.porce || (d._defaultG + 'g') || 'standardní porce';
-    document.getElementById('f-porce').value          = '';
-    document.getElementById('f-porce').placeholder    = 'Např. ' + (d._defaultPcs ? d._defaultPcs + ' ks, ' : '') + d._defaultG + 'g';
+    document.getElementById('res-icon').textContent        = d.icon || '🍽️';
+    document.getElementById('res-name').textContent        = name;
+    document.getElementById('res-porce-lbl').textContent   = d.porce || (d._defaultG + 'g') || 'standardní porce';
+
+    // Nastav stepper na výchozí gramy, přepínač na 'g'
+    _currentUnit = 'g';
+    document.getElementById('f-porce').value = d._defaultG || 100;
+    document.getElementById('f-porce').step  = '10';
+    document.getElementById('unit-label').textContent = 'g';
+    // Vizuálně aktivuj tlačítko G
+    const btnG2  = document.getElementById('unit-g');
+    const btnKs2 = document.getElementById('unit-ks');
+    if (btnG2)  { btnG2.style.background='var(--accent)'; btnG2.style.color='#fff'; btnG2.style.borderColor='var(--accent)'; }
+    if (btnKs2) { btnKs2.style.background='var(--card2)'; btnKs2.style.color='var(--sub)'; btnKs2.style.borderColor='var(--border)'; }
 
     updateResultDisplay(d.kcal, d.sacharidy, d.bilkoviny, d.tuky);
+    // Nastav výchozí hodnotu na 1 (ks nebo g dle přepínače)
+    _currentUnit = 'ks';
+    setUnit('ks');
+    document.getElementById('f-porce').value = '1';
+    document.getElementById('porce-hint').textContent = '1 ks';
+    document.getElementById('res-porce-lbl').textContent = '1 ks';
+    if (_pendingEntry) _pendingEntry.porce = '1 ks';
 
     const sel = document.getElementById('f-type');
     if (d.typ) [...sel.options].forEach((o,i) => { if (o.value === d.typ) sel.selectedIndex = i; });
@@ -727,67 +756,54 @@ async function lookupAndFill() {
   }
 }
 
+let _currentUnit = 'g';
+
 function updateResultDisplay(kcal, s, b, t) {
   document.getElementById('res-kcal').textContent = Math.round(kcal);
   document.getElementById('res-s').textContent    = (+s).toFixed(1);
   document.getElementById('res-b').textContent    = (+b).toFixed(1);
   document.getElementById('res-t').textContent    = (+t).toFixed(1);
   if (_pendingEntry) {
-    _pendingEntry.kcal      = kcal;
+    _pendingEntry.kcal      = +kcal;
     _pendingEntry.sacharidy = +s;
     _pendingEntry.bilkoviny = +b;
     _pendingEntry.tuky      = +t;
   }
 }
 
-function recalcPorce(val) {
-  if (!_baseEntry100g) return;
-  val = val.trim();
-  if (!val) {
-    // Bez zadání — vrátíme výchozí porci
-    const b = _baseEntry100g;
-    const mult = b.defaultG / 100;
-    updateResultDisplay(b.kcal100*mult, b.sacharidy100*mult, b.bilkoviny100*mult, b.tuky100*mult);
-    document.getElementById('res-porce-lbl').textContent = b.defaultLabel;
-    if (_pendingEntry) _pendingEntry.porce = b.defaultLabel;
-    document.getElementById('porce-hint').textContent = 'Hodnoty pro standardní porci.';
-    return;
-  }
-
-  const b = _baseEntry100g;
-  let grams = null;
-  let label = val;
-
-  // Parsování: "2 ks", "3ks", číslo → kusy, "150g", "150 g" → gramy
-  const gMatch  = val.match(/^(\d+(?:[.,]\d+)?)\s*g\b/i);
-  const kgMatch = val.match(/^(\d+(?:[.,]\d+)?)\s*kg\b/i);
-  const pcsMatch= val.match(/^(\d+(?:[.,]\d+)?)\s*(ks|kus|kusy|krajíc|plátek|lžíce|lžička|porce|bowl)?$/i);
-
-  if (kgMatch) {
-    grams = parseFloat(kgMatch[1].replace(',','.')) * 1000;
-    label = val;
-  } else if (gMatch) {
-    grams = parseFloat(gMatch[1].replace(',','.'));
-    label = val;
-  } else if (pcsMatch) {
-    const n = parseFloat(pcsMatch[1].replace(',','.'));
-    const unit = (pcsMatch[2] || 'ks').toLowerCase();
-    if (unit === 'lžíce') grams = n * 15;
-    else if (unit === 'lžička') grams = n * 5;
-    else grams = n * b.defaultG; // 1 ks = defaultG gramů
-    label = n + ' ' + (pcsMatch[2] || 'ks');
-  }
-
-  if (grams && grams > 0) {
-    const mult = grams / 100;
-    const r1 = v => Math.round(v*10)/10;
-    updateResultDisplay(b.kcal100*mult, r1(b.sacharidy100*mult), r1(b.bilkoviny100*mult), r1(b.tuky100*mult));
-    document.getElementById('res-porce-lbl').textContent = label;
-    document.getElementById('porce-hint').textContent = Math.round(grams) + 'g · přepočítáno z ' + b.defaultG + 'g/100g';
-    if (_pendingEntry) _pendingEntry.porce = label;
+// Přepne jen štítek jednotky — hodnota ani výživa se nemění
+function setUnit(unit) {
+  _currentUnit = unit;
+  document.getElementById('unit-label').textContent = unit;
+  const btnG  = document.getElementById('unit-g');
+  const btnKs = document.getElementById('unit-ks');
+  if (unit === 'g') {
+    btnG.style.background = 'var(--accent)'; btnG.style.color = '#fff'; btnG.style.borderColor = 'var(--accent)';
+    btnKs.style.background = 'var(--card2)'; btnKs.style.color = 'var(--sub)'; btnKs.style.borderColor = 'var(--border)';
   } else {
-    document.getElementById('porce-hint').textContent = '⚠ Nerozpoznaný formát — zadej např. "2 ks" nebo "150g"';
+    btnKs.style.background = 'var(--accent)'; btnKs.style.color = '#fff'; btnKs.style.borderColor = 'var(--accent)';
+    btnG.style.background = 'var(--card2)'; btnG.style.color = 'var(--sub)'; btnG.style.borderColor = 'var(--border)';
   }
+  _updatePorceLabel();
+}
+
+function stepPorce(dir) {
+  const inp = document.getElementById('f-porce');
+  const val = parseFloat(inp.value) || 0;
+  inp.value = Math.max(1, val + dir);
+  _updatePorceLabel();
+}
+
+function recalcLive() {
+  _updatePorceLabel();
+}
+
+function _updatePorceLabel() {
+  const val = parseFloat(document.getElementById('f-porce').value) || 0;
+  const label = val + ' ' + _currentUnit;
+  document.getElementById('res-porce-lbl').textContent = label;
+  document.getElementById('porce-hint').textContent = label;
+  if (_pendingEntry) _pendingEntry.porce = label;
 }
 
 function confirmAdd() {
