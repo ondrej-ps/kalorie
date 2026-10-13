@@ -547,11 +547,25 @@ function normalize(s) {
     .replace(/[^a-z0-9 ]/g,'').trim();
 }
 
-function scoreMatch(query, entry) {
-  const q = normalize(query);
-  const name = normalize(entry[0]);
-  const aliases = (entry[1] || []).map(normalize);
-  const all = [name, ...aliases];
+// Index lokální DB — normalizace názvů/aliasů proběhne jen jednou, ne při každém hledání
+let FOOD_INDEX = null;
+function getFoodIndex() {
+  if (!FOOD_INDEX) {
+    FOOD_INDEX = FOOD_DB.map(e => {
+      const name = normalize(e[0]);
+      return {
+        e,
+        all: [name, ...(e[1] || []).map(normalize)],
+        eWords: name.split(' ').filter(w => w.length > 2),
+      };
+    });
+  }
+  return FOOD_INDEX;
+}
+
+// q = už normalizovaný dotaz, qWords = jeho slova delší než 2 znaky
+function scoreMatch(q, qWords, idx) {
+  const all = idx.all;
 
   // Exact match
   if (all.some(a => a === q)) return 1000;
@@ -563,23 +577,27 @@ function scoreMatch(query, entry) {
   if (all.some(a => q.includes(a))) return 550;
 
   // Word-level matching
-  const qWords = q.split(' ').filter(w => w.length > 2);
   let wordScore = 0;
   for (const w of qWords) {
     if (all.some(a => a.includes(w))) wordScore += 100;
   }
   // Check if entry words appear in query
-  const eWords = name.split(' ').filter(w => w.length > 2);
-  for (const w of eWords) {
+  for (const w of idx.eWords) {
     if (q.includes(w)) wordScore += 80;
   }
   return wordScore;
 }
 
 function findFood(query, portionHint) {
-  const scored = FOOD_DB.map(e => ({ e, score: scoreMatch(query, e) }))
-    .filter(x => x.score > 0)
-    .sort((a,b) => b.score - a.score);
+  const q = normalize(query);
+  if (!q) return null;
+  const qWords = q.split(' ').filter(w => w.length > 2);
+  const scored = [];
+  for (const idx of getFoodIndex()) {
+    const score = scoreMatch(q, qWords, idx);
+    if (score > 0) scored.push({ e: idx.e, score });
+  }
+  scored.sort((a,b) => b.score - a.score);
 
   if (scored.length === 0) return null;
   const best = scored[0].e;
@@ -617,7 +635,55 @@ function findFood(query, portionHint) {
 
 // ── Open Food Facts API ──────────────────────────────────────────────
 // Volné CORS API, miliony produktů, bez API klíče
+// Cache výsledků OFF — opakované hledání je okamžité a funguje i offline
+const OFF_CACHE_KEY = 'kt_off_cache_v1';
+const OFF_CACHE_TTL = 30 * 86400000;  // 30 dní pro nalezené produkty
+const OFF_MISS_TTL  = 86400000;       // 1 den pro „nenalezeno“
+const OFF_CACHE_MAX = 300;            // max. počet uložených dotazů
+let OFF_CACHE = null;
+const OFF_PENDING = new Map();        // běžící požadavky (deduplikace)
+
+function loadOffCache() {
+  if (!OFF_CACHE) {
+    try { OFF_CACHE = JSON.parse(localStorage.getItem(OFF_CACHE_KEY)) || {}; }
+    catch { OFF_CACHE = {}; }
+  }
+  return OFF_CACHE;
+}
+function saveOffCache() {
+  const keys = Object.keys(OFF_CACHE);
+  if (keys.length > OFF_CACHE_MAX) {
+    keys.sort((a,b) => OFF_CACHE[a].t - OFF_CACHE[b].t)
+      .slice(0, keys.length - OFF_CACHE_MAX)
+      .forEach(k => delete OFF_CACHE[k]);
+  }
+  try { localStorage.setItem(OFF_CACHE_KEY, JSON.stringify(OFF_CACHE)); }
+  catch { /* plné úložiště — cache je jen optimalizace */ }
+}
+
 async function searchOpenFoodFacts(query) {
+  const key = normalize(query);
+  const cache = loadOffCache();
+  const hit = cache[key];
+  if (hit && Date.now() - hit.t < (hit.v ? OFF_CACHE_TTL : OFF_MISS_TTL)) {
+    return hit.v && { ...hit.v };
+  }
+  let req = OFF_PENDING.get(key);
+  if (!req) {
+    req = fetchOpenFoodFacts(query)
+      .then(v => {
+        cache[key] = { t: Date.now(), v };
+        saveOffCache();
+        return v;
+      })
+      .finally(() => OFF_PENDING.delete(key));
+    OFF_PENDING.set(key, req);
+  }
+  const v = await req;
+  return v && { ...v };
+}
+
+async function fetchOpenFoodFacts(query) {
   const url = 'https://world.openfoodfacts.org/cgi/search.pl?'
     + 'search_terms=' + encodeURIComponent(query)
     + '&search_simple=1&action=process&json=1&page_size=5'

@@ -1,4 +1,4 @@
-const CACHE = 'kalorie-v2';
+const CACHE = 'kalorie-v3';
 
 // Zjistíme base path dynamicky (funguje na / i na /kalorie/)
 const BASE = self.registration.scope;
@@ -33,6 +33,9 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   // Jen GET requesty
   if (e.request.method !== 'GET') return;
+  // Cizí domény (Open Food Facts API) necachujeme natrvalo — aplikace
+  // si výsledky ukládá sama s expirací (kt_off_cache_v1)
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
